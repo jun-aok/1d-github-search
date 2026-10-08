@@ -44,4 +44,18 @@ describe("SearchForm", () => {
     await user.type(searchBox(), "{Enter}");
     expect(onSearch).not.toHaveBeenCalled();
   });
+
+  it("URL の q が変わったら（ブラウザバックなど）、未送信の下書きを捨てて入力欄を q に合わせる", async () => {
+    const user = userEvent.setup();
+    const { rerender, onSearch } = renderForm({ query: "react" });
+    expect(searchBox()).toHaveValue("react");
+    await user.clear(searchBox());
+    await user.type(searchBox(), "vue");
+
+    rerender(<SearchForm query="next.js" busy={false} onSearch={onSearch} />);
+    expect(searchBox()).toHaveValue("next.js");
+
+    rerender(<SearchForm query="" busy={false} onSearch={onSearch} />);
+    expect(searchBox()).toHaveValue("");
+  });
 });
