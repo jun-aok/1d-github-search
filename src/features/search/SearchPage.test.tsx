@@ -169,4 +169,30 @@ describe("SearchPage", () => {
     });
     expect(screen.getByRole("button", { name: "検索" })).toBeEnabled();
   });
+
+  it("別のキーワードで検索すると 1 ページ目の URL に移る。覚えている結果があっても取り直す", async () => {
+    const user = userEvent.setup();
+    const { navigations } = renderPage(ok(aSearchCondition("react", 3)));
+    await screen.findByText("7,297,834 件中 41〜60 件を表示");
+    const searchBox = screen.getByLabelText("リポジトリ名");
+
+    await user.clear(searchBox);
+    await user.type(searchBox, "vue{Enter}");
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    expect(navigations).toEqual([aSearchCondition("vue", 1)]);
+
+    await user.clear(searchBox);
+    await user.type(searchBox, "react{Enter}");
+    await waitFor(() => {
+      expect(requests.map((u) => u.search)).toEqual(["?q=react&page=3", "?q=vue", "?q=react"]);
+    });
+    expect(navigations).toEqual([aSearchCondition("vue", 1), aSearchCondition("react", 1)]);
+
+    // 一度表示した条件（vue）に戻るときも、検索ボタンなら取り直す
+    await user.clear(searchBox);
+    await user.type(searchBox, "vue{Enter}");
+    await waitFor(() => {
+      expect(requests).toHaveLength(4);
+    });
+  });
 });
