@@ -1,4 +1,4 @@
-import { parseSearchCondition, searchConditionFromParams } from "./searchCondition";
+import { parseSearchCondition, searchConditionFromParams, toSearchParams } from "./searchCondition";
 
 describe("parseSearchCondition", () => {
   it("query の前後の空白を除いて受け取る", () => {
@@ -46,7 +46,11 @@ describe("parseSearchCondition の失敗", () => {
     expect(r.error.issues[0]?.message).not.toBe("");
   });
 
-  it.each([["null", null], ["文字列", "react"], ["項目なし", {}]])("%s は失敗する", (_name, input) => {
+  it.each([
+    ["null", null],
+    ["文字列", "react"],
+    ["項目なし", {}],
+  ])("%s は失敗する", (_name, input) => {
     expect(parseSearchCondition(input).ok).toBe(false);
   });
 });
@@ -93,5 +97,23 @@ describe("searchConditionFromParams", () => {
     ["abc", false],
   ])("page=%j は %s", (page, expected) => {
     expect(searchConditionFromParams(new URLSearchParams({ q: "react", page })).ok).toBe(expected);
+  });
+});
+
+describe("toSearchParams", () => {
+  it("page が 2 以上なら q と page を出す", () => {
+    expect(toSearchParams({ query: "react", page: 3 }).toString()).toBe("q=react&page=3");
+  });
+
+  it("page が 1 なら page を省略する", () => {
+    expect(toSearchParams({ query: "react", page: 1 }).toString()).toBe("q=react");
+  });
+
+  it("日本語や空白を含む query は URL エンコードされ、読み戻すと同じ条件になる", () => {
+    const condition = { query: "リアクト hooks&a=b", page: 2 };
+    const back = searchConditionFromParams(
+      new URLSearchParams(toSearchParams(condition).toString()),
+    );
+    expect(back).toEqual({ ok: true, value: condition });
   });
 });

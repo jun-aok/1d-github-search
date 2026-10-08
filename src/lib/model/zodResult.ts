@@ -2,7 +2,10 @@ import type { z } from "zod";
 import { fail, ok, type ParseError, type Result } from "./result";
 
 // zod の検証結果を Result<値, ParseError> に詰め替える。モデルのファイルだけが使う（ZodError を外に出さないため）
-export function safeParse<S extends z.ZodType>(schema: S, input: unknown): Result<z.infer<S>, ParseError> {
+export function safeParse<S extends z.ZodType>(
+  schema: S,
+  input: unknown,
+): Result<z.infer<S>, ParseError> {
   const r = schema.safeParse(input);
   if (r.success) return ok(r.data);
   return fail({

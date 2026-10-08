@@ -16,9 +16,17 @@ export function parseSearchCondition(input: unknown): Result<SearchCondition, Pa
 
 const PAGE_PATTERN = /^[1-9][0-9]*$/;
 
-export function searchConditionFromParams(params: URLSearchParams): Result<SearchCondition, ParseError> {
+export function searchConditionFromParams(
+  params: URLSearchParams,
+): Result<SearchCondition, ParseError> {
   const rawPage = params.get("page");
   // 省略は 1 ページ目。形式が合わない文字列は数値にせずそのまま渡し、parseSearchCondition に page の失敗として断らせる
   const page = rawPage === null ? 1 : PAGE_PATTERN.test(rawPage) ? Number(rawPage) : rawPage;
   return parseSearchCondition({ query: params.get("q"), page });
+}
+
+export function toSearchParams(condition: SearchCondition): URLSearchParams {
+  const params = new URLSearchParams({ q: condition.query });
+  if (condition.page !== 1) params.set("page", String(condition.page));
+  return params;
 }
