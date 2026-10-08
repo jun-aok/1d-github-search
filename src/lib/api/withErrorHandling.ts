@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { env, type Env } from "@/lib/env";
 import type { GitHubClient } from "@/lib/github/githubClient";
+import type { GitHubResponseInfo } from "@/lib/github/githubError";
 import { createGitHubClient } from "@/lib/github";
 import { logger, reporter } from "@/lib/observability";
 import type { ErrorReporter } from "@/lib/observability/errorReporter";
@@ -33,7 +34,13 @@ export type Handler = (
   deps: Deps,
 ) => Promise<Result<unknown, AppError>>;
 
-// 記録するもの（docs/design.md 8 節）: requestId、ルート、q と page（検索条件は個人情報ではない）、原因、所要時間。
+// GitHub のステータスとレート制限の残り・回復時刻。どのトークンの枠を使い切ったかを後から確かめるため
+function responseFields(response: GitHubResponseInfo | undefined): LogFields {
+  return response === undefined ? {} : { ...response };
+}
+
+// 記録するもの（docs/design.md 8 節）: requestId、ルート、q と page（検索条件は個人情報ではない）、原因、
+// GitHub のステータスと x-ratelimit-*、所要時間。
 // 記録しないもの: トークン、Authorization ヘッダー、リクエスト全文
 function logFailure(logger: Logger, error: AppError, fields: LogFields): void {
   switch (error.kind) {
@@ -46,6 +53,7 @@ function logFailure(logger: Logger, error: AppError, fields: LogFields): void {
         ...fields,
         kind: error.kind,
         retryAfter: error.retryAfter,
+        ...responseFields(error.response),
       });
       return;
     case "upstream":
@@ -54,6 +62,7 @@ function logFailure(logger: Logger, error: AppError, fields: LogFields): void {
         kind: error.kind,
         reason: error.reason,
         detail: error.detail,
+        ...responseFields(error.response),
       });
       return;
     case "internal":

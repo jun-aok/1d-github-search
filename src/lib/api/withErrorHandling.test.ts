@@ -104,6 +104,33 @@ describe("withErrorHandling: 失敗の応答と記録", () => {
     expect(typeof fields?.["durationMs"]).toBe("number");
   });
 
+  it("GitHub のステータスと x-ratelimit-remaining / reset を別の項目で残す", async () => {
+    const { logger, deps } = setup();
+    const response = { status: 403, rateLimitRemaining: 0, rateLimitReset: 1000000090 };
+
+    await call(failing({ kind: "rate_limited", retryAfter: 30, response }), deps);
+    await call(
+      failing({
+        kind: "upstream",
+        reason: "http",
+        detail: "x",
+        response: { status: 503, rateLimitRemaining: null, rateLimitReset: null },
+      }),
+      deps,
+    );
+
+    expect(logger.entries[0]?.fields).toMatchObject({
+      status: 403,
+      rateLimitRemaining: 0,
+      rateLimitReset: 1000000090,
+    });
+    expect(logger.entries[1]?.fields).toMatchObject({
+      status: 503,
+      rateLimitRemaining: null,
+      rateLimitReset: null,
+    });
+  });
+
   it("入力不正・見つからない・422 は記録しない", async () => {
     const { logger, reporter, deps } = setup();
 
