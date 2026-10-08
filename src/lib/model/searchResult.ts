@@ -6,8 +6,8 @@ import { safeParse } from "./zodResult";
 
 // items の中身は RepoSummary のスキーマを export せず、parseRepoSummary に任せる
 const schema = z.object({
-  totalCount: z.number(),
-  items: z.array(z.unknown()),
+  totalCount: z.number().int().min(0),
+  items: z.array(z.unknown()).max(20),
 });
 
 export type SearchResult = DeepReadonly<{ totalCount: number; items: RepoSummary[] }>;
@@ -25,7 +25,8 @@ export function parseSearchResult(input: unknown): Result<SearchResult, ParseErr
       return;
     }
     for (const issue of r.error.issues) {
-      const path = issue.path === "" ? `items.${index}` : `items.${index}.${issue.path}`;
+      const at = `items.${String(index)}`;
+      const path = issue.path === "" ? at : `${at}.${issue.path}`;
       issues.push({ path, message: issue.message });
     }
   });
