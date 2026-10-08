@@ -1,0 +1,15 @@
+import { z } from "zod";
+import type { DeepReadonly } from "./readonly";
+import type { ParseError, Result } from "./result";
+import { safeParse } from "./zodResult";
+
+const schema = z.object({
+  query: z.string().trim(),
+  page: z.number(),
+});
+
+export type SearchCondition = DeepReadonly<z.infer<typeof schema>>;
+
+export function parseSearchCondition(input: unknown): Result<SearchCondition, ParseError> {
+  return safeParse(schema, input);
+}
