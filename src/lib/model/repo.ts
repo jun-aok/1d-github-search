@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { DeepReadonly } from "./readonly";
-import { fail, type ParseError, type Result } from "./result";
+import type { ParseError, Result } from "./result";
 import { safeParse } from "./zodResult";
 
 const count = z.number().int().min(0);
@@ -18,24 +18,18 @@ const summarySchema = z.object({
 
 export type RepoSummary = DeepReadonly<z.infer<typeof summarySchema>>;
 
-export type RepoDetail = DeepReadonly<{
-  id: number;
-  fullName: string;
-  owner: { login: string; avatarUrl: string };
-  description: string | null;
-  language: string | null;
-  stars: number;
-  url: string;
-  watchers: number;
-  forks: number;
-  openIssues: number;
-}>;
+const detailSchema = summarySchema.extend({
+  watchers: count,
+  forks: count,
+  openIssues: count,
+});
+
+export type RepoDetail = DeepReadonly<z.infer<typeof detailSchema>>;
 
 export function parseRepoSummary(input: unknown): Result<RepoSummary, ParseError> {
   return safeParse(summarySchema, input);
 }
 
 export function parseRepoDetail(input: unknown): Result<RepoDetail, ParseError> {
-  void input;
-  return fail({ issues: [] });
+  return safeParse(detailSchema, input);
 }

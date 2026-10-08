@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { DeepReadonly } from "./readonly";
-import type { ParseError, type Result } from "./result";
+import type { ParseError, Result } from "./result";
 import { safeParse } from "./zodResult";
 
 const schema = z.object({

@@ -1,4 +1,4 @@
-import { parseRepoSummary } from "./repo";
+import { parseRepoDetail, parseRepoSummary } from "./repo";
 
 const summary = {
   id: 10270250,
@@ -80,5 +80,38 @@ describe("parseRepoSummary", () => {
     expect(parseRepoSummary(null).ok).toBe(false);
     expect(parseRepoSummary("x").ok).toBe(false);
     expect(parseRepoSummary([]).ok).toBe(false);
+  });
+});
+
+describe("parseRepoDetail", () => {
+  const detail = { ...summary, watchers: 6700, forks: 49000, openIssues: 1100 };
+
+  it("RepoSummary に watchers・forks・openIssues を足した形を受け取る", () => {
+    expect(parseRepoDetail(detail)).toEqual({ ok: true, value: detail });
+  });
+
+  it("language が null でもよい", () => {
+    const input = { ...detail, language: null };
+    expect(parseRepoDetail(input)).toEqual({ ok: true, value: input });
+  });
+
+  describe("watchers・forks・openIssues が欠ければ失敗し、path に項目名が入る", () => {
+    it.each(["watchers", "forks", "openIssues"])("%s", (key) => {
+      const input = Object.fromEntries(Object.entries(detail).filter(([k]) => k !== key));
+      const r = parseRepoDetail(input);
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.error.issues.map((i) => i.path)).toEqual([key]);
+    });
+  });
+
+  it.each(["watchers", "forks", "openIssues"])("%s が負数や小数なら失敗する", (key) => {
+    expect(parseRepoDetail({ ...detail, [key]: -1 }).ok).toBe(false);
+    expect(parseRepoDetail({ ...detail, [key]: 0.5 }).ok).toBe(false);
+    expect(parseRepoDetail({ ...detail, [key]: 0 }).ok).toBe(true);
+  });
+
+  it("RepoSummary と同じ規則（url は https）を持つ", () => {
+    expect(parseRepoDetail({ ...detail, url: "http://github.com/facebook/react" }).ok).toBe(false);
   });
 });
