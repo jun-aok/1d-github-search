@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { useState } from "react";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ok } from "@/lib/model/result";
 import type { SearchCondition } from "@/lib/model/searchCondition";
 import { BFF_ORIGIN, bffHandlers, searchReactResult } from "@/mocks/bffHandlers";
@@ -22,6 +22,7 @@ beforeAll(() => {
   });
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   server.resetHandlers();
   requests.length = 0;
 });
@@ -193,6 +194,27 @@ describe("SearchPage", () => {
     await user.type(searchBox, "vue{Enter}");
     await waitFor(() => {
       expect(requests).toHaveLength(4);
+    });
+  });
+
+  it("「次へ」で次のページの URL に移り、新しいページの結果が表示されたらページの先頭へスクロールする", async () => {
+    const user = userEvent.setup();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+    const { navigations } = renderPage(ok(aSearchCondition("react")));
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+
+    const hold = holdNextSearch();
+    await user.click(screen.getByRole("button", { name: "次へ →" }));
+    expect(navigations).toEqual([aSearchCondition("react", 2)]);
+    await waitFor(() => {
+      expect(screen.getByRole("list")).toHaveAttribute("aria-busy", "true");
+    });
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    hold.release();
+    await screen.findByText("7,297,834 件中 21〜40 件を表示");
+    await waitFor(() => {
+      expect(scrollTo).toHaveBeenCalledWith(0, 0);
     });
   });
 });

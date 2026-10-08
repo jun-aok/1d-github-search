@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { EmptyMessage } from "@/components/EmptyMessage";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { ListSkeleton } from "@/components/Skeleton";
 import { formatNumber } from "@/lib/format";
 import { PER_PAGE } from "@/lib/model/pagination";
-import { toSearchParams, type SearchCondition } from "@/lib/model/searchCondition";
+import {
+  parseSearchCondition,
+  toSearchParams,
+  type SearchCondition,
+} from "@/lib/model/searchCondition";
 import { PaginationNav } from "./PaginationNav";
 import { RepoList } from "./RepoList";
 import { SearchForm } from "./SearchForm";
@@ -20,6 +25,22 @@ export function SearchPage({ url }: { readonly url: SearchUrl }) {
   const { response, isFetching, retry, refresh } = useSearch(current);
   const view = searchView({ condition, response, isFetching });
   const busy = view.kind === "loading" || view.kind === "refreshing";
+
+  // ページを移ったら、新しいページの結果が表示されたところでページの先頭へスクロールする（docs/design.md 5 節）
+  const scrollOnShow = useRef(false);
+  useEffect(() => {
+    if (!scrollOnShow.current || isFetching) return;
+    scrollOnShow.current = false;
+    window.scrollTo(0, 0);
+  }, [response, isFetching]);
+
+  const move = (page: number) => {
+    if (current === null) return;
+    const next = parseSearchCondition({ query: current.query, page });
+    if (!next.ok) return;
+    scrollOnShow.current = true;
+    url.navigate(next.value);
+  };
   return (
     <>
       <SearchForm
@@ -31,7 +52,7 @@ export function SearchPage({ url }: { readonly url: SearchUrl }) {
           if (current === null || !isSameCondition(current, next)) url.navigate(next);
         }}
       />
-      <SearchBody view={view} onRetry={retry} />
+      <SearchBody view={view} onRetry={retry} onMove={move} />
     </>
   );
 }
@@ -40,13 +61,12 @@ function isSameCondition(a: SearchCondition, b: SearchCondition): boolean {
   return toSearchParams(a).toString() === toSearchParams(b).toString();
 }
 
-function SearchBody({
-  view,
-  onRetry,
-}: {
-  readonly view: SearchView;
+type BodyProps = {
   readonly onRetry: () => void;
-}) {
+  readonly onMove: (page: number) => void;
+};
+
+function SearchBody({ view, ...handlers }: { readonly view: SearchView } & BodyProps) {
   switch (view.kind) {
     case "initial":
       return (
@@ -64,9 +84,9 @@ function SearchBody({
     case "loading":
       return <ListSkeleton label="検索しています" rows={PER_PAGE} />;
     case "refreshing":
-      return <Settled view={view.previous} busy onRetry={onRetry} />;
+      return <Settled view={view.previous} busy {...handlers} />;
     default:
-      return <Settled view={view} busy={false} onRetry={onRetry} />;
+      return <Settled view={view} busy={false} {...handlers} />;
   }
 }
 
@@ -75,11 +95,8 @@ function Settled({
   view,
   busy,
   onRetry,
-}: {
-  readonly view: SettledView;
-  readonly busy: boolean;
-  readonly onRetry: () => void;
-}) {
+  onMove,
+}: { readonly view: SettledView; readonly busy: boolean } & BodyProps) {
   switch (view.kind) {
     case "rateLimited":
     case "failed":
@@ -97,7 +114,7 @@ function Settled({
             {`${formatNumber(view.totalCount)} 件`}
           </p>
           <p className="mt-16 text-center text-gray-500">このページには結果がありません。</p>
-          <PaginationNav pagination={view.pagination} onMove={() => undefined} />
+          <PaginationNav pagination={view.pagination} onMove={onMove} />
         </section>
       );
     case "loaded":
@@ -107,7 +124,7 @@ function Settled({
             {`${formatNumber(view.result.totalCount)} 件中 ${String(view.range.from)}〜${String(view.range.to)} 件を表示`}
           </p>
           <RepoList items={view.result.items} busy={busy} />
-          <PaginationNav pagination={view.pagination} onMove={() => undefined} />
+          <PaginationNav pagination={view.pagination} onMove={onMove} />
         </section>
       );
   }
