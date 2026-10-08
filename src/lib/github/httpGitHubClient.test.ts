@@ -174,13 +174,21 @@ describe("HttpGitHubClient: レート制限", () => {
     respondWith(403, { "retry-after": "30" });
     expect(await createHttpGitHubClient().search(search)).toEqual({
       ok: false,
-      error: { kind: "rate_limited", retryAfter: 30 },
+      error: {
+        kind: "rate_limited",
+        retryAfter: 30,
+        response: { status: 403, rateLimitRemaining: null, rateLimitReset: null },
+      },
     });
 
     respondWith(429, { "retry-after": "12" });
     expect(await createHttpGitHubClient().search(search)).toEqual({
       ok: false,
-      error: { kind: "rate_limited", retryAfter: 12 },
+      error: {
+        kind: "rate_limited",
+        retryAfter: 12,
+        response: { status: 429, rateLimitRemaining: null, rateLimitReset: null },
+      },
     });
   });
 
@@ -189,7 +197,11 @@ describe("HttpGitHubClient: レート制限", () => {
 
     expect(await createHttpGitHubClient({ nowMs }).search(search)).toEqual({
       ok: false,
-      error: { kind: "rate_limited", retryAfter: 90 },
+      error: {
+        kind: "rate_limited",
+        retryAfter: 90,
+        response: { status: 403, rateLimitRemaining: 0, rateLimitReset: 1000000090 },
+      },
     });
   });
 
@@ -218,6 +230,37 @@ describe("HttpGitHubClient: レート制限", () => {
 
     expect(await createHttpGitHubClient({ nowMs }).search(search)).toMatchObject({
       error: { kind: "rate_limited", retryAfter: 60 },
+    });
+  });
+});
+
+describe("HttpGitHubClient: ログに残す GitHub の応答の情報", () => {
+  const search = aSearchCondition("react");
+
+  function respondWith(status: number, headers: Record<string, string>): void {
+    server.use(
+      http.get(`${GITHUB_API}/search/repositories`, () =>
+        HttpResponse.json({ message: "x" }, { status, headers }),
+      ),
+    );
+  }
+
+  it("レート制限では、ステータスと x-ratelimit-remaining / x-ratelimit-reset を付ける", async () => {
+    respondWith(403, { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1000000090" });
+
+    expect(errorOf(await createHttpGitHubClient().search(search))).toMatchObject({
+      kind: "rate_limited",
+      response: { status: 403, rateLimitRemaining: 0, rateLimitReset: 1000000090 },
+    });
+  });
+
+  it("GitHub の障害（upstream / http）でも付ける。ヘッダーが無ければ null", async () => {
+    respondWith(503, {});
+
+    expect(errorOf(await createHttpGitHubClient().search(search))).toMatchObject({
+      kind: "upstream",
+      reason: "http",
+      response: { status: 503, rateLimitRemaining: null, rateLimitReset: null },
     });
   });
 });

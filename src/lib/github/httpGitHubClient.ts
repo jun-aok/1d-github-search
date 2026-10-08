@@ -1,7 +1,7 @@
 import { readJson } from "@/lib/http/readJson";
 import { fail, ok, type ParseError, type Result } from "@/lib/model/result";
 import type { GitHubClient } from "./githubClient";
-import { contractViolation, type GitHubError } from "./githubError";
+import { contractViolation, type GitHubError, type GitHubResponseInfo } from "./githubError";
 import { parseGitHubRepo, parseGitHubSearch } from "./parse";
 
 const API_ORIGIN = "https://api.github.com";
@@ -25,6 +25,14 @@ function numberHeader(res: Response, name: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function responseInfo(res: Response): GitHubResponseInfo {
+  return {
+    status: res.status,
+    rateLimitRemaining: numberHeader(res, "x-ratelimit-remaining"),
+    rateLimitReset: numberHeader(res, "x-ratelimit-reset"),
+  };
+}
+
 // 403 / 429 は、retry-after があるか x-ratelimit-remaining が 0 のときだけレート制限（docs/design.md 4 節）
 function rateLimitFrom(res: Response, nowMs: number): GitHubError | null {
   if (res.status !== 403 && res.status !== 429) return null;
@@ -35,7 +43,11 @@ function rateLimitFrom(res: Response, nowMs: number): GitHubError | null {
   const reset = numberHeader(res, "x-ratelimit-reset");
   const seconds =
     retryAfter ?? (reset === null ? DEFAULT_RETRY_AFTER_SECONDS : reset - nowMs / 1000);
-  return { kind: "rate_limited", retryAfter: Math.max(0, Math.ceil(seconds)) };
+  return {
+    kind: "rate_limited",
+    retryAfter: Math.max(0, Math.ceil(seconds)),
+    response: responseInfo(res),
+  };
 }
 
 async function errorFromResponse(res: Response, nowMs: number): Promise<GitHubError> {
@@ -46,7 +58,7 @@ async function errorFromResponse(res: Response, nowMs: number): Promise<GitHubEr
   const text = await res.text().catch(() => "");
   const detail = `GitHub が ${String(res.status)} を返しました: ${text.slice(0, 500)}`;
   if (res.status === 422) return { kind: "invalid_request", detail };
-  return { kind: "upstream", reason: "http", detail };
+  return { kind: "upstream", reason: "http", detail, response: responseInfo(res) };
 }
 
 // fetch で GitHub を呼ぶ本物の実装。ヘッダー・エラー対応・解析はこの実装の仕様（docs/design.md 4 節）
