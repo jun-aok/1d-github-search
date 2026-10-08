@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { useState } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ok } from "@/lib/model/result";
 import type { SearchCondition } from "@/lib/model/searchCondition";
-import { bffHandlers } from "@/mocks/bffHandlers";
+import { BFF_ORIGIN, bffHandlers, searchReactResult } from "@/mocks/bffHandlers";
 import { aSearchCondition } from "@/test/builders";
 import { SearchPage } from "./SearchPage";
 import type { SearchUrl } from "./useSearchUrl";
@@ -33,6 +34,26 @@ function paragraphWithText(text: string) {
   return screen.findByText(
     (_, element) => element?.tagName === "P" && element.textContent === text,
   );
+}
+
+// release() を呼ぶまで、次の検索の応答を返さない（取得中の表示を確かめる）
+function holdNextSearch() {
+  const gate = Promise.withResolvers<undefined>();
+  server.use(
+    http.get(
+      `${BFF_ORIGIN}/api/search`,
+      async () => {
+        await gate.promise;
+        return HttpResponse.json(searchReactResult);
+      },
+      { once: true },
+    ),
+  );
+  return {
+    release: () => {
+      gate.resolve(undefined);
+    },
+  };
 }
 
 const guideText = "キーワードを入力して GitHub のリポジトリを検索します。";
@@ -124,5 +145,28 @@ describe("SearchPage", () => {
       expect(requests).toHaveLength(2);
     });
     expect(await screen.findByRole("alert")).toHaveTextContent("検索に失敗しました");
+  });
+
+  it("同じキーワードで検索し直すと、URL は変えずに取り直し、その間は前の結果を薄く残す", async () => {
+    const user = userEvent.setup();
+    const { navigations } = renderPage(ok(aSearchCondition("react")));
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+
+    const hold = holdNextSearch();
+    await user.click(screen.getByRole("button", { name: "検索" }));
+    await waitFor(() => {
+      expect(screen.getByRole("list")).toHaveAttribute("aria-busy", "true");
+    });
+    expect(screen.getByRole("list")).toHaveClass("opacity-50");
+    expect(screen.getByRole("button", { name: "検索" })).toBeDisabled();
+    expect(screen.queryByText("検索しています")).toBeNull();
+    expect(requests).toHaveLength(2);
+    expect(navigations).toEqual([]);
+
+    hold.release();
+    await waitFor(() => {
+      expect(screen.getByRole("list")).toHaveAttribute("aria-busy", "false");
+    });
+    expect(screen.getByRole("button", { name: "検索" })).toBeEnabled();
   });
 });

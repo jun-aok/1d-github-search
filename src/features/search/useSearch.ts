@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchSearch } from "@/lib/api/client";
 import type { SearchCondition } from "@/lib/model/searchCondition";
 import type { SearchResponse } from "./searchView";
@@ -17,9 +17,12 @@ export type SearchState = {
   readonly isFetching: boolean;
   // 再試行ボタン。同じ条件でもう一度取得する
   readonly retry: () => void;
+  // 検索ボタン。その条件の結果を覚えていても使わず、表示するときに必ず取り直させる
+  readonly refresh: (condition: SearchCondition) => void;
 };
 
 export function useSearch(condition: SearchCondition | null): SearchState {
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: condition === null ? ["search"] : searchQueryKey(condition),
     // 例外を投げず Result を返す（失敗も data に入る）。前の結果を出している間も件数やページを正しく出せるよう、条件も一緒に持つ
@@ -42,6 +45,10 @@ export function useSearch(condition: SearchCondition | null): SearchState {
     isFetching: query.isFetching,
     retry: () => {
       void refetch();
+    },
+    // 表示中の条件なら今すぐ取り直し、そうでなければ古い扱いにして、表示したときに取り直させる
+    refresh: (target) => {
+      void queryClient.invalidateQueries({ queryKey: searchQueryKey(target), exact: true });
     },
   };
 }
