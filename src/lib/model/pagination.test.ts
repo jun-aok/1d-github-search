@@ -1,4 +1,4 @@
-import { MAX_PAGE, MAX_RESULTS, PER_PAGE, pagination, totalPages } from "./pagination";
+import { MAX_PAGE, MAX_RESULTS, PER_PAGE, pagination, resultRange, totalPages } from "./pagination";
 
 describe("定数", () => {
   it("1 ページ 20 件、GitHub の検索は先頭 1,000 件まで、最大 50 ページ", () => {
@@ -80,5 +80,21 @@ describe("pagination", () => {
       prevPage: null,
       nextPage: null,
     });
+  });
+});
+
+describe("resultRange（件数表示の a〜b）", () => {
+  it.each([
+    [1, 20, 1, 20],
+    [2, 20, 21, 40],
+    [50, 20, 981, 1000],
+    [3, 7, 41, 47],
+    [1, 2, 1, 2],
+  ])("%i ページ目に %i 件なら %i〜%i 件目", (page, count, from, to) => {
+    expect(resultRange({ query: "react", page }, count)).toEqual({ from, to });
+  });
+
+  it("範囲外のページ（0 件）では from が to を超える", () => {
+    expect(resultRange({ query: "react", page: 10 }, 0)).toEqual({ from: 181, to: 180 });
   });
 });

@@ -27,8 +27,8 @@ export function pagination(condition: SearchCondition, totalCount: number): Pagi
 
 export type ResultRange = { readonly from: number; readonly to: number };
 
+// 「a〜b 件目」の a と b。a = (page-1)*20+1、b = (page-1)*20+そのページの件数
 export function resultRange(condition: SearchCondition, itemCount: number): ResultRange {
-  void condition;
-  void itemCount;
-  return { from: -1, to: -1 };
+  const offset = (condition.page - 1) * PER_PAGE;
+  return { from: offset + 1, to: offset + itemCount };
 }
