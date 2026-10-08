@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { aSearchCondition } from "@/test/builders";
 import { SearchForm } from "./SearchForm";
 
 function renderForm(props: Partial<Parameters<typeof SearchForm>[0]> = {}) {
@@ -23,5 +24,16 @@ describe("SearchForm", () => {
 
     await user.type(searchBox(), "react");
     expect(searchButton()).toBeEnabled();
+  });
+
+  it("ボタンでも Enter でも、前後の空白を除いたキーワードの 1 ページ目で onSearch を呼ぶ", async () => {
+    const user = userEvent.setup();
+    const { onSearch } = renderForm();
+    await user.type(searchBox(), "  react ");
+    await user.click(searchButton());
+    await user.type(searchBox(), "{Enter}");
+    expect(onSearch).toHaveBeenCalledTimes(2);
+    expect(onSearch).toHaveBeenNthCalledWith(1, aSearchCondition("react", 1));
+    expect(onSearch).toHaveBeenNthCalledWith(2, aSearchCondition("react", 1));
   });
 });

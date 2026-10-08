@@ -12,14 +12,21 @@ export type SearchFormProps = {
 };
 
 // 入力欄と検索ボタン（docs/design.md 5 節）。クラス構成は mock/search.html のまま
-export function SearchForm({ query }: SearchFormProps) {
+export function SearchForm({ query, onSearch }: SearchFormProps) {
   const inputId = useId();
   const [draft, setDraft] = useState(query);
   // 下書きを検索条件として解析できるか（空白のみ・256 文字超は不可）。BFF と同じ規則
   const condition = parseSearchCondition({ query: draft, page: 1 });
 
   return (
-    <form className="flex gap-2" role="search">
+    <form
+      className="flex gap-2"
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (condition.ok) onSearch(condition.value);
+      }}
+    >
       <label htmlFor={inputId} className="sr-only">
         リポジトリ名
       </label>
