@@ -46,6 +46,22 @@ function SearchBody({ view }: { readonly view: SearchView }) {
       );
     case "loading":
       return <ListSkeleton label="検索しています" rows={PER_PAGE} />;
+    case "empty":
+      return (
+        <EmptyMessage hint="別のキーワードで試してください。">
+          「<span>{view.query}</span>」に一致するリポジトリは見つかりませんでした。
+        </EmptyMessage>
+      );
+    case "outOfRange":
+      return (
+        <section className="mt-6">
+          <p className="text-sm text-gray-600" aria-live="polite">
+            {`${formatNumber(view.totalCount)} 件`}
+          </p>
+          <p className="mt-16 text-center text-gray-500">このページには結果がありません。</p>
+          <PaginationNav pagination={view.pagination} onMove={() => undefined} />
+        </section>
+      );
     case "loaded":
       return (
         <section className="mt-6">

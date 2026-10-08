@@ -27,6 +27,13 @@ afterAll(() => {
   server.close();
 });
 
+// 子要素（<span> など）をまたいだ文言で段落を探す
+function paragraphWithText(text: string) {
+  return screen.findByText(
+    (_, element) => element?.tagName === "P" && element.textContent === text,
+  );
+}
+
 const guideText = "キーワードを入力して GitHub のリポジトリを検索します。";
 
 // useSearchUrl の偽物。URL の代わりにメモリ上で検索条件を読み書きする（docs/design.md 5 節）
@@ -82,5 +89,25 @@ describe("SearchPage", () => {
     expect(screen.getByLabelText("リポジトリ名")).toHaveValue("react");
     expect(screen.getByRole("button", { name: "検索" })).toBeEnabled();
     expect(requests.map((u) => u.search)).toEqual(["?q=react&page=2"]);
+  });
+
+  it("0 件なら一致なしの案内を出し、一覧とページネーションは出さない", async () => {
+    renderPage(ok(aSearchCondition("__empty__")));
+    expect(
+      await paragraphWithText("「__empty__」に一致するリポジトリは見つかりませんでした。"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("別のキーワードで試してください。")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByRole("navigation")).toBeNull();
+  });
+
+  it("総ページ数を超えるページは、件数だけ・結果なしの案内・ページネーションを出す", async () => {
+    renderPage(ok(aSearchCondition("__few__", 3)));
+    expect(await screen.findByText("このページには結果がありません。")).toBeInTheDocument();
+    expect(screen.getByText("2 件")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "ページネーション" })).toHaveTextContent(
+      "3 / 1 ページ",
+    );
   });
 });
