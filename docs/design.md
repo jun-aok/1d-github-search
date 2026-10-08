@@ -50,7 +50,7 @@ src/
     api/         handlers.ts(handleSearch, handleRepo), appError.ts(AppError), respond.ts(AppError → Response の変換表),
                  withErrorHandling.ts(Deps, defaultDeps を含む), client.ts(ブラウザから BFF を呼ぶ。絶対 URL で fetch)
     http/        readJson.ts(res.json() を unknown で受ける)
-    observability/ logger.ts(interface), errorReporter.ts(interface), console.ts, memory.ts, index.ts(環境で選ぶ)
+    observability/ logger.ts(interface), errorReporter.ts(interface), console.ts, memory.ts, index.ts(既定の実装を返す。テストは Deps で注入)
     format.ts    数値のカンマ区切り、アイコン URL のサイズ指定（avatarUrl）
     model/readonly.ts  DeepReadonly 型
     env.ts       環境変数 → Env。next.config.ts から読み込む
@@ -219,10 +219,13 @@ type ErrorResponse = { error: ApiError };   // エラー応答の JSON。成功�
 
   ```ts
   type GitHubError =
-    | { kind: "rate_limited"; retryAfter: number }
+    | { kind: "rate_limited"; retryAfter: number; response?: GitHubResponseInfo }
     | { kind: "not_found" }
     | { kind: "invalid_request"; detail: string }                                   // GitHub が 422
-    | { kind: "upstream"; reason: "http" | "network" | "timeout" | "contract"; detail: string };
+    | { kind: "upstream"; reason: "http" | "network" | "timeout" | "contract"; detail: string; response?: GitHubResponseInfo };
+
+  // GitHub の応答があったときのステータスと x-ratelimit-remaining / x-ratelimit-reset（無ければ null）。ログにだけ残し、BFF の応答には出さない
+  type GitHubResponseInfo = { status: number; rateLimitRemaining: number | null; rateLimitReset: number | null };
 
   type AppError = GitHubError | { kind: "bad_request"; detail: string } | { kind: "internal"; detail: string };
   ```
@@ -236,7 +239,7 @@ type ErrorResponse = { error: ApiError };   // エラー応答の JSON。成功�
 | --- | --- | --- | --- |
 | （クエリが `SearchCondition` に変換できない） | `bad_request` | 400 `BAD_REQUEST` | なし |
 | （パスが `RepoPath` に変換できない） | `not_found` | 404 `NOT_FOUND` | なし |
-| 403 / 429（`x-ratelimit-remaining: 0` または `retry-after` あり） | `rate_limited` | 429 `RATE_LIMITED`（`retryAfter` = `retry-after` か `x-ratelimit-reset` までの秒数。0 未満は 0） | `warn` |
+| 403 / 429（`x-ratelimit-remaining: 0` または `retry-after` あり） | `rate_limited` | 429 `RATE_LIMITED`（`retryAfter` = `retry-after` か `x-ratelimit-reset` までの秒数を切り上げた整数。0 未満は 0。どちらも無ければ 60） | `warn` |
 | 404 | `not_found` | 404 `NOT_FOUND` | なし |
 | 422 | `invalid_request` | 400 `BAD_REQUEST` | なし |
 | 5xx | `upstream` / `http` | 502 `UPSTREAM_ERROR` | `error` |
@@ -353,7 +356,7 @@ page.tsx
   | `GITHUB_TOKEN` | 任意（無ければ未認証で呼ぶ） | **必須**。無ければビルド・起動が失敗する（`GITHUB_CLIENT=fake` のときは不要） |
   | `GITHUB_CLIENT` | `http`（既定）または `fake` | 同左。E2E は production ビルド + `fake` で動かす |
   | エラーの詳細（`ApiError.detail`、スタック） | 画面に表示する | 応答にも画面にも出さない |
-  | エラーログ | 標準出力に JSON 1 行 | 標準出力に JSON 1 行 |
+  | エラーログ | console（標準出力 / 標準エラー）に JSON 1 行 | console（標準出力 / 標準エラー）に JSON 1 行 |
 
 - 環境変数は `lib/env.ts` で `Env` に変換し、`next.config.ts` から import する → 理由: `next build` と `next start` の両方で評価されるので、トークンの設定漏れがデプロイ時に止まる。リクエストが来てから気づくことがない
   - エラーメッセージは「`GITHUB_TOKEN` が未設定です。… を参照」のように、何をすればよいか分かる文にする
@@ -411,7 +414,7 @@ page.tsx
 - エラーは **想定内**（利用者の操作や外部要因で起こり、画面で案内できる）と **想定外**（バグ・仕様変更）に分け、想定外だけを「記録して気づく」対象にする
 - production では、利用者には code に応じた日本語の案内だけを出し、スタックトレースや GitHub の生メッセージは出さない。詳細はログにだけ出す。ただし `requestId` は「問い合わせ番号」として小さく表示する → 理由: 利用者からの問い合わせをログと突き合わせられる。要件の「ログと突き合わせられる」を画面側でも成立させる
 - development では、`ApiError.detail` に詳細を入れ、`ErrorMessage` が案内文の下に折りたたみで表示する → 理由: 開発中はログを見に行かずに原因が分かる方が速い
-- 記録先は抽象化し、実インフラ（Sentry、Datadog 等）は用意しない。既定実装は標準出力に JSON 1 行 → 理由: Vercel 等のホスティングでは標準出力がそのままログ基盤に流れる。実インフラを入れるときは実装を 1 つ足して `index.ts` の選択を変えるだけ
+- 記録先は抽象化し、実インフラ（Sentry、Datadog 等）は用意しない。既定実装は console（標準出力 / 標準エラー）に JSON 1 行 → 理由: Vercel 等のホスティングでは標準出力・標準エラーがそのままログ基盤に流れる。実インフラを入れるときは実装を 1 つ足して `index.ts` の選択を変えるだけ
 
 ### 分類と扱い
 
@@ -443,11 +446,11 @@ interface ErrorReporter {
 
 | 実装 | 用途 |
 | --- | --- |
-| `console.ts` | 既定。`{ level, time, message, requestId, ...fields }` を JSON 1 行で標準出力へ。`error` は `console.error` |
+| `console.ts` | 既定。`{ level, time, message, requestId, ...fields }` を JSON 1 行で console へ。`warn` は `console.warn`、`error` は `console.error` |
 | `memory.ts` | テスト用。配列に貯めて、テストが「記録されたこと」を検証する |
 
-- `index.ts` が環境（`NODE_ENV`、テストでは注入）に応じて実装を返す。Route Handler やフックは interface だけに依存する
-- 記録に**含めない**もの: `GITHUB_TOKEN`、`Authorization` ヘッダー、リクエスト全文。含めるもの: `requestId`、ルート、`q` と `page`（検索条件は個人情報ではない）、GitHub のステータス、`x-ratelimit-remaining` / `x-ratelimit-reset`、所要時間 ms
+- `index.ts` は既定の実装（Logger は `console.ts`、ErrorReporter は Logger に `error` として書く `createLoggerReporter`）を返す。環境では分岐しない。テストは `Deps` に `memory.ts` を注入する。Route Handler やフックは interface だけに依存する → 理由: 本番用の実装は 1 つしかなく、本番コードにテスト用の分岐を入れない
+- 記録に**含めない**もの: `GITHUB_TOKEN`、`Authorization` ヘッダー、リクエスト全文。含めるもの: `requestId`、ルート（パターンでなくパスそのもの。例 `/api/repos/react/react`。owner や repo は秘密ではなく、調査に役立つ）、`q` と `page`（検索条件は個人情報ではない）、GitHub のステータス、`x-ratelimit-remaining` / `x-ratelimit-reset`、所要時間 ms
 
 ### BFF 側の流れ
 
