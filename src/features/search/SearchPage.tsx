@@ -34,9 +34,11 @@ export function SearchPage({ url }: { readonly url: SearchUrl }) {
     window.scrollTo(0, 0);
   }, [response, isFetching]);
 
+  // ページネーションは表示中の結果のものなので、移動先も表示中の結果の条件から組み立てる。
+  // 別のキーワードを取得中（前の結果を薄く表示中）でも、URL の新しいキーワードと混ぜない
   const move = (page: number) => {
-    if (current === null) return;
-    const next = parseSearchCondition({ query: current.query, page });
+    if (response === undefined) return;
+    const next = parseSearchCondition({ query: response.condition.query, page });
     if (!next.ok) return;
     scrollOnShow.current = true;
     url.navigate(next.value);

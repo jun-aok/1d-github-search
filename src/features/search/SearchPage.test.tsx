@@ -218,6 +218,24 @@ describe("SearchPage", () => {
     });
   });
 
+  it("別のキーワードを取得中に「次へ」を押すと、表示中の結果のキーワードの次のページへ移る", async () => {
+    const user = userEvent.setup();
+    const { navigations } = renderPage(ok(aSearchCondition("react")));
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+
+    const hold = holdNextSearch();
+    const searchBox = screen.getByLabelText("リポジトリ名");
+    await user.clear(searchBox);
+    await user.type(searchBox, "vue{Enter}");
+    await waitFor(() => {
+      expect(screen.getByRole("list")).toHaveAttribute("aria-busy", "true");
+    });
+
+    await user.click(screen.getByRole("button", { name: "次へ →" }));
+    expect(navigations).toEqual([aSearchCondition("vue", 1), aSearchCondition("react", 2)]);
+    hold.release();
+  });
+
   it("前の結果がエラーでも、次の取得中はそれを薄くして残し、取得できたら結果に替える", async () => {
     const user = userEvent.setup();
     renderPage(ok(aSearchCondition("__error__")));
