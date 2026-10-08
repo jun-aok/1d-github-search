@@ -4,6 +4,8 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { GITHUB_API, githubHandlers } from "@/mocks/githubHandlers";
 import { aRepoPath, aSearchCondition } from "@/test/builders";
+import type { Result } from "@/lib/model/result";
+import type { GitHubError } from "./githubError";
 import { createHttpGitHubClient } from "./httpGitHubClient";
 
 const server = setupServer(...githubHandlers);
@@ -17,6 +19,11 @@ afterEach(() => {
 afterAll(() => {
   server.close();
 });
+
+function errorOf(result: Result<unknown, GitHubError>): GitHubError {
+  if (result.ok) throw new Error("失敗を期待しましたが成功しました");
+  return result.error;
+}
 
 // 受け取ったリクエストを記録する
 function captureRequests(path: string, response: () => Response): Request[] {
@@ -120,10 +127,9 @@ describe("HttpGitHubClient: GitHub のエラー応答", () => {
   it("422 は invalid_request で、GitHub の本文を detail に残す", async () => {
     respondWith(422);
 
-    expect(await createHttpGitHubClient().search(search)).toEqual({
-      ok: false,
-      error: { kind: "invalid_request", detail: expect.stringContaining("GitHub のメッセージ") },
-    });
+    const error = errorOf(await createHttpGitHubClient().search(search));
+    expect(error.kind).toBe("invalid_request");
+    expect("detail" in error && error.detail).toContain("GitHub のメッセージ");
   });
 
   it.each([500, 503, 401, 451])(
@@ -131,14 +137,9 @@ describe("HttpGitHubClient: GitHub のエラー応答", () => {
     async (status) => {
       respondWith(status);
 
-      expect(await createHttpGitHubClient().search(search)).toEqual({
-        ok: false,
-        error: {
-          kind: "upstream",
-          reason: "http",
-          detail: expect.stringContaining(String(status)),
-        },
-      });
+      const error = errorOf(await createHttpGitHubClient().search(search));
+      expect(error).toMatchObject({ kind: "upstream", reason: "http" });
+      expect("detail" in error && error.detail).toContain(String(status));
     },
   );
 
