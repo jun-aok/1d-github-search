@@ -1,3 +1,4 @@
+import { createErrorResponse, type ApiError } from "@/lib/model/apiError";
 import { parseEnv, type Env } from "@/lib/env";
 import { parseRepoPath, type RepoPath } from "@/lib/model/repoPath";
 import { parseSearchCondition, type SearchCondition } from "@/lib/model/searchCondition";
@@ -22,4 +23,12 @@ export function anEnv(vars: {
   GITHUB_TOKEN?: string;
 }): Env {
   return parseEnv(vars);
+}
+
+// BFF のエラー応答の ApiError。モデルの createErrorResponse から作る
+export function anApiError(
+  code: ApiError["code"],
+  requestId = "3f9c2a1e-7b44-4d8e-9a10-5c6e7f8a9b01",
+): ApiError {
+  return createErrorResponse({ code, message: "test", requestId }).error;
 }

@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fail, ok } from "@/lib/model/result";
-import {
-  searchEmptyResult,
-  searchOutOfRangeResult,
-  searchReactResult,
-} from "@/mocks/bffHandlers";
-import { aSearchCondition } from "@/test/builders";
+import { searchEmptyResult, searchOutOfRangeResult, searchReactResult } from "@/mocks/bffHandlers";
+import { anApiError, aSearchCondition } from "@/test/builders";
 import { searchView } from "./searchView";
 
 describe("searchView", () => {
@@ -72,5 +68,21 @@ describe("searchView", () => {
       totalCount: 2,
       pagination: { page: 3, totalPages: 1, prevPage: 1, nextPage: null },
     });
+  });
+
+  it("エラー応答は code が RATE_LIMITED ならレート制限、それ以外は通信エラー", () => {
+    const condition = aSearchCondition("react");
+    const viewOf = (error: ReturnType<typeof anApiError>) =>
+      searchView({
+        condition: ok(condition),
+        response: { condition, result: fail(error) },
+        isFetching: false,
+      });
+    const rateLimited = anApiError("RATE_LIMITED");
+    const upstream = anApiError("UPSTREAM_ERROR");
+    const internal = anApiError("INTERNAL_ERROR");
+    expect(viewOf(rateLimited)).toEqual({ kind: "rateLimited", error: rateLimited });
+    expect(viewOf(upstream)).toEqual({ kind: "failed", error: upstream });
+    expect(viewOf(internal)).toEqual({ kind: "failed", error: internal });
   });
 });

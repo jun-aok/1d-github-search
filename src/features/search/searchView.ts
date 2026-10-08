@@ -44,7 +44,12 @@ export function searchView(input: SearchViewInput): SearchView {
 }
 
 function settledView({ condition, result }: SearchResponse): SettledView {
-  if (!result.ok) throw new Error("not implemented");
+  if (!result.ok) {
+    const error = result.error;
+    return error.code === "RATE_LIMITED"
+      ? { kind: "rateLimited", error }
+      : { kind: "failed", error };
+  }
   const value = result.value;
   if (value.totalCount === 0) return { kind: "empty", query: condition.query };
   const pages = pagination(condition, value.totalCount);
