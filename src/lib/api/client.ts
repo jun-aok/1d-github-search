@@ -17,7 +17,9 @@ export async function fetchSearch(condition: SearchCondition): Promise<Result<Se
     return fail(createClientError("BFF に接続できません", String(e)));
   }
   const body = await readJson(res);
-  if (!body.ok) throw new Error("not implemented");
+  if (!body.ok) {
+    return fail(createClientError("応答を JSON として読めません", `${String(res.status)} ${body.error.message}`));
+  }
   if (!res.ok) {
     const error = parseErrorResponse(body.value);
     if (error.ok) return fail(error.value.error);

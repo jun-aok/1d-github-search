@@ -49,4 +49,15 @@ describe("fetchSearch", () => {
     expect(error.code).toBe("UPSTREAM_ERROR");
     expect(error.requestId).toBeUndefined();
   });
+
+  it("応答が JSON でない（手前のプロキシの HTML など）ときは、問い合わせ番号の無い失敗を返す", async () => {
+    server.use(
+      http.get(`${BFF_ORIGIN}/api/search`, () =>
+        HttpResponse.html("<h1>Bad Gateway</h1>", { status: 502 }),
+      ),
+    );
+    const error = errorOf(await fetchSearch(aSearchCondition("react")));
+    expect(error.code).toBe("UPSTREAM_ERROR");
+    expect(error.requestId).toBeUndefined();
+  });
 });
