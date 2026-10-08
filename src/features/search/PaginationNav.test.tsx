@@ -30,4 +30,13 @@ describe("PaginationNav", () => {
     await user.click(nextButton());
     expect(onMove).toHaveBeenCalledWith(2);
   });
+
+  it("総ページ数を超えるページでは「次へ」が無効で、「前へ」は最終ページへ移る", async () => {
+    const user = userEvent.setup();
+    const { nav, onMove } = renderNav(3, 2);
+    expect(nav).toHaveTextContent("3 / 1 ページ");
+    expect(nextButton()).toBeDisabled();
+    await user.click(previousButton());
+    expect(onMove).toHaveBeenCalledWith(1);
+  });
 });
