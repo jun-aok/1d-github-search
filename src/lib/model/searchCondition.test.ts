@@ -58,4 +58,40 @@ describe("searchConditionFromParams", () => {
       value: { query: "react", page: 3 },
     });
   });
+
+  it("page を省略すると 1 ページ目になる", () => {
+    expect(searchConditionFromParams(new URLSearchParams("q=react"))).toEqual({
+      ok: true,
+      value: { query: "react", page: 1 },
+    });
+  });
+
+  it("q が無ければ失敗する（page だけあっても同じ）", () => {
+    expect(searchConditionFromParams(new URLSearchParams("")).ok).toBe(false);
+    expect(searchConditionFromParams(new URLSearchParams("page=2")).ok).toBe(false);
+  });
+
+  it("q が空・空白のみ・257 文字なら失敗する", () => {
+    for (const q of ["", "  ", "a".repeat(257)]) {
+      expect(searchConditionFromParams(new URLSearchParams({ q })).ok).toBe(false);
+    }
+  });
+
+  it.each([
+    ["0", false],
+    ["1", true],
+    ["50", true],
+    ["51", false],
+    ["02", false],
+    ["2.0", false],
+    ["+2", false],
+    ["-1", false],
+    ["1e1", false],
+    ["0x10", false],
+    ["", false],
+    [" 2", false],
+    ["abc", false],
+  ])("page=%j は %s", (page, expected) => {
+    expect(searchConditionFromParams(new URLSearchParams({ q: "react", page })).ok).toBe(expected);
+  });
 });
