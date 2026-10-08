@@ -3,7 +3,11 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import type { ParseError, Result } from "@/lib/model/result";
-import { searchConditionFromParams, type SearchCondition } from "@/lib/model/searchCondition";
+import {
+  searchConditionFromParams,
+  toSearchParams,
+  type SearchCondition,
+} from "@/lib/model/searchCondition";
 
 // 検索ページの URL（?q=&page=）の読み書きをここに閉じ込める（docs/design.md 5 節）。
 // コンポーネントは useSearchParams や pushState を直接使わず、テストではこのフックの戻り値を偽物に差し替える
@@ -29,10 +33,11 @@ export function useSearchUrl(): SearchUrl {
     if (condition !== null && !condition.ok) window.history.replaceState(null, "", "/");
   }, [condition]);
 
-  return {
-    condition,
-    navigate: () => {
-      throw new Error("not implemented");
-    },
-  };
+  return { condition, navigate };
+}
+
+// router.push はサーバーにページ情報を取りに行くことがあるので、pushState で書き換える。
+// useSearchParams は pushState を検知する（docs/design.md 5 節）
+function navigate(condition: SearchCondition): void {
+  window.history.pushState(null, "", `/?${toSearchParams(condition).toString()}`);
 }

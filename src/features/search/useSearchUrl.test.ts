@@ -33,4 +33,16 @@ describe("useSearchUrl", () => {
     renderAt("?q=react&page=2");
     expect(`${window.location.pathname}${window.location.search}`).toBe("/?q=react&page=2");
   });
+
+  it("navigate は履歴を 1 つ積んで URL を書き換える。1 ページ目は page を付けない", () => {
+    const { result } = renderAt("");
+    const before = window.history.length;
+    result.current.navigate(aSearchCondition("next.js 日本語"));
+    expect(window.history.length).toBe(before + 1);
+    expect(new URLSearchParams(window.location.search).get("q")).toBe("next.js 日本語");
+    expect(new URLSearchParams(window.location.search).has("page")).toBe(false);
+
+    result.current.navigate(aSearchCondition("react", 3));
+    expect(`${window.location.pathname}${window.location.search}`).toBe("/?q=react&page=3");
+  });
 });
