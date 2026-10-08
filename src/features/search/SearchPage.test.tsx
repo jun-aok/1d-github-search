@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { setupServer } from "msw/node";
 import { useState } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -109,5 +110,19 @@ describe("SearchPage", () => {
     expect(screen.getByRole("navigation", { name: "ページネーション" })).toHaveTextContent(
       "3 / 1 ページ",
     );
+  });
+
+  it("エラーなら案内と再試行ボタンを出し、再試行でもう一度取得する", async () => {
+    const user = userEvent.setup();
+    renderPage(ok(aSearchCondition("__error__")));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("検索に失敗しました");
+    expect(requests).toHaveLength(1);
+
+    await user.click(within(alert).getByRole("button", { name: "再試行" }));
+    await waitFor(() => {
+      expect(requests).toHaveLength(2);
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("検索に失敗しました");
   });
 });

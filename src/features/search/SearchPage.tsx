@@ -1,6 +1,7 @@
 "use client";
 
 import { EmptyMessage } from "@/components/EmptyMessage";
+import { ErrorMessage } from "@/components/ErrorMessage";
 import { ListSkeleton } from "@/components/Skeleton";
 import { formatNumber } from "@/lib/format";
 import { PER_PAGE } from "@/lib/model/pagination";
@@ -14,7 +15,9 @@ import type { SearchUrl } from "./useSearchUrl";
 // 検索ページ（docs/design.md 5 節）。URL の検索条件で検索し、画面の状態に応じて 1 つを表示する
 export function SearchPage({ url }: { readonly url: SearchUrl }) {
   const { condition } = url;
-  const { response, isFetching } = useSearch(condition?.ok === true ? condition.value : null);
+  const { response, isFetching, retry } = useSearch(
+    condition?.ok === true ? condition.value : null,
+  );
   const view = searchView({ condition, response, isFetching });
   const busy = view.kind === "loading" || view.kind === "refreshing";
   return (
@@ -24,12 +27,18 @@ export function SearchPage({ url }: { readonly url: SearchUrl }) {
         busy={busy}
         onSearch={url.navigate}
       />
-      <SearchBody view={view} />
+      <SearchBody view={view} onRetry={retry} />
     </>
   );
 }
 
-function SearchBody({ view }: { readonly view: SearchView }) {
+function SearchBody({
+  view,
+  onRetry,
+}: {
+  readonly view: SearchView;
+  readonly onRetry: () => void;
+}) {
   switch (view.kind) {
     case "initial":
       return (
@@ -46,6 +55,9 @@ function SearchBody({ view }: { readonly view: SearchView }) {
       );
     case "loading":
       return <ListSkeleton label="検索しています" rows={PER_PAGE} />;
+    case "rateLimited":
+    case "failed":
+      return <ErrorMessage error={view.error} failedTitle="検索に失敗しました" onRetry={onRetry} />;
     case "empty":
       return (
         <EmptyMessage hint="別のキーワードで試してください。">

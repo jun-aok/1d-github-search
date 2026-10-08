@@ -15,6 +15,8 @@ export function searchQueryKey(condition: SearchCondition) {
 export type SearchState = {
   readonly response: SearchResponse | undefined;
   readonly isFetching: boolean;
+  // 再試行ボタン。同じ条件でもう一度取得する
+  readonly retry: () => void;
 };
 
 export function useSearch(condition: SearchCondition | null): SearchState {
@@ -34,5 +36,12 @@ export function useSearch(condition: SearchCondition | null): SearchState {
     retry: false,
     staleTime: (q) => (q.state.data?.result.ok === true ? SUCCESS_STALE_TIME_MS : 0),
   });
-  return { response: query.data, isFetching: query.isFetching };
+  const { refetch } = query;
+  return {
+    response: query.data,
+    isFetching: query.isFetching,
+    retry: () => {
+      void refetch();
+    },
+  };
 }
