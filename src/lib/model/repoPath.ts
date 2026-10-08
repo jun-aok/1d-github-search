@@ -26,7 +26,15 @@ export function parseRepoPath(input: unknown): Result<RepoPath, ParseError> {
 }
 
 // URL のパスの値は符号化されたまま届く（ブラウザのページの params）。1 回だけ復号してから同じ規則で確かめる
-const encodedSegment = z.string().transform((v) => decodeURIComponent(v));
+// 不正な % の並びは decodeURIComponent が URIError を投げるので、ここで受けて ParseError にする
+const encodedSegment = z.string().transform((v, ctx) => {
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    ctx.addIssue({ code: "custom", message: "% の符号化が不正です", input: v });
+    return z.NEVER;
+  }
+});
 
 const encodedSchema = z.object({ owner: encodedSegment, repo: encodedSegment }).pipe(schema);
 

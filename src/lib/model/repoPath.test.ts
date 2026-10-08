@@ -70,4 +70,18 @@ describe("parseEncodedRepoPath（URL のパスの値。符号化されたまま�
       value: { owner: "my-org", name: "リ%25" },
     });
   });
+
+  it("不正な % の並びは例外を投げず ParseError にする", () => {
+    const r = parseEncodedRepoPath({ owner: "a%E0%A4%A", repo: "x" });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.issues[0]?.path).toBe("owner");
+    expect(parseEncodedRepoPath({ owner: "facebook", repo: "%" }).ok).toBe(false);
+  });
+
+  it("復号した結果に同じ規則を掛ける（%20 は空白、%2F は / になるので断る）", () => {
+    expect(parseEncodedRepoPath({ owner: "a%20b", repo: "x" }).ok).toBe(false);
+    expect(parseEncodedRepoPath({ owner: "a%2Fb", repo: "x" }).ok).toBe(false);
+    expect(parseEncodedRepoPath({ owner: "%2E%2E", repo: "x" }).ok).toBe(false);
+  });
 });
