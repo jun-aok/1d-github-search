@@ -57,6 +57,27 @@ describe("respond: AppError → HTTP 応答", () => {
     expect(await bodyOf(response)).toMatchObject({ error: { retryAfter: 30 } });
   });
 
+  it("ログ用の GitHub のステータスと x-ratelimit-* は本文に出さない（development でも）", async () => {
+    const response = respond(
+      {
+        kind: "rate_limited",
+        retryAfter: 30,
+        response: { status: 403, rateLimitRemaining: 0, rateLimitReset: 1000000090 },
+      },
+      "req-1",
+      development,
+    );
+
+    expect(await bodyOf(response)).toEqual({
+      error: {
+        code: "RATE_LIMITED",
+        message: "GitHub rate limit exceeded",
+        requestId: "req-1",
+        retryAfter: 30,
+      },
+    });
+  });
+
   it("レート制限以外の本文に retryAfter は無い", async () => {
     const response = respond({ kind: "not_found" }, "req-1", production);
 

@@ -1,5 +1,5 @@
 import type { Env } from "@/lib/env";
-import type { ApiError, ErrorResponse } from "@/lib/model/apiError";
+import { createErrorResponse, type ApiError } from "@/lib/model/apiError";
 import type { AppError } from "./appError";
 
 type Code = ApiError["code"];
@@ -39,13 +39,12 @@ function detailOf(error: AppError): string | undefined {
 export function respond(error: AppError, requestId: string, env: Env): Response {
   const { status, code, message } = describe(error);
   const detail = env.nodeEnv === "production" ? undefined : detailOf(error);
-  const apiError: ApiError = {
+  const body = createErrorResponse({
     code,
     message,
     requestId,
-    ...(detail === undefined ? {} : { detail }),
-    ...(error.kind === "rate_limited" ? { retryAfter: error.retryAfter } : {}),
-  };
-  const body: ErrorResponse = { error: apiError };
+    detail,
+    retryAfter: error.kind === "rate_limited" ? error.retryAfter : undefined,
+  });
   return Response.json(body, { status, headers: { "x-request-id": requestId } });
 }

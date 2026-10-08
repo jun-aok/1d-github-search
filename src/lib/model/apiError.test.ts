@@ -1,4 +1,4 @@
-import { parseErrorResponse } from "./apiError";
+import { createErrorResponse, parseErrorResponse } from "./apiError";
 
 describe("parseErrorResponse", () => {
   it("code と message だけのエラー応答を受け取る", () => {
@@ -58,5 +58,57 @@ describe("parseErrorResponse", () => {
     expect(parseErrorResponse({ code: "NOT_FOUND", message: "m" }).ok).toBe(false);
     expect(parseErrorResponse({ totalCount: 0, items: [] }).ok).toBe(false);
     expect(parseErrorResponse(null).ok).toBe(false);
+  });
+});
+
+describe("createErrorResponse", () => {
+  it("code・message・requestId から、ブラウザ側の parse を通るエラー応答を作る", () => {
+    const response = createErrorResponse({
+      code: "NOT_FOUND",
+      message: "Not found",
+      requestId: "r",
+    });
+
+    expect(response).toEqual({
+      error: { code: "NOT_FOUND", message: "Not found", requestId: "r" },
+    });
+    expect(parseErrorResponse(response)).toEqual({ ok: true, value: response });
+  });
+
+  it("detail と retryAfter は、渡されたときだけ含める", () => {
+    const response = createErrorResponse({
+      code: "RATE_LIMITED",
+      message: "m",
+      requestId: "r",
+      detail: "d",
+      retryAfter: 30,
+    });
+
+    expect(response.error).toEqual({
+      code: "RATE_LIMITED",
+      message: "m",
+      requestId: "r",
+      detail: "d",
+      retryAfter: 30,
+    });
+  });
+
+  it("retryAfter は 0 以上の整数に直す（小数は切り上げ、負数は 0）", () => {
+    const of = (retryAfter: number) =>
+      createErrorResponse({ code: "RATE_LIMITED", message: "m", requestId: "r", retryAfter }).error
+        .retryAfter;
+
+    expect(of(1.2)).toBe(2);
+    expect(of(-5)).toBe(0);
+    expect(
+      parseErrorResponse(
+        createErrorResponse({
+          code: "RATE_LIMITED",
+          message: "m",
+          requestId: "r",
+          retryAfter: 1.2,
+        }),
+      ).ok,
+    ).toBe(true);
   });
 });
