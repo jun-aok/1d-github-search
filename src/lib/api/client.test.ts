@@ -1,6 +1,14 @@
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { bffHandlers, searchReactResult, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
+import {
+  BFF_ORIGIN,
+  bffHandlers,
+  searchReactResult,
+  TEST_REQUEST_ID,
+} from "@/mocks/bffHandlers";
+import type { ApiError } from "@/lib/model/apiError";
+import type { Result } from "@/lib/model/result";
 import { aSearchCondition } from "@/test/builders";
 import { fetchSearch } from "./client";
 
@@ -16,6 +24,11 @@ afterAll(() => {
   server.close();
 });
 
+function errorOf(result: Result<unknown, ApiError>): ApiError {
+  if (result.ok) throw new Error("失敗を期待しましたが成功しました");
+  return result.error;
+}
+
 describe("fetchSearch", () => {
   it("BFF の成功応答を SearchResult にして返す", async () => {
     const result = await fetchSearch(aSearchCondition("react"));
@@ -28,5 +41,12 @@ describe("fetchSearch", () => {
       ok: false,
       error: { code: "RATE_LIMITED", message: "test", requestId: TEST_REQUEST_ID },
     });
+  });
+
+  it("BFF に届かない（ネットワーク断）ときは、問い合わせ番号の無い失敗を返す", async () => {
+    server.use(http.get(`${BFF_ORIGIN}/api/search`, () => HttpResponse.error()));
+    const error = errorOf(await fetchSearch(aSearchCondition("react")));
+    expect(error.code).toBe("UPSTREAM_ERROR");
+    expect(error.requestId).toBeUndefined();
   });
 });

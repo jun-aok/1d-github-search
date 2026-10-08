@@ -43,3 +43,9 @@ export function createErrorResponse(input: ErrorResponseInput): ErrorResponse {
     },
   };
 }
+
+// ブラウザ側で BFF のエラー応答を得られなかったとき（BFF に届かない、JSON でない、形が違う）の ApiError。
+// BFF を通っていないので問い合わせ番号は無い。画面の分岐（docs/design.md 5 節）では通信エラーとして扱う
+export function createClientError(message: string, detail?: string): ApiError {
+  return { code: "UPSTREAM_ERROR", message, ...(detail === undefined ? {} : { detail }) };
+}
