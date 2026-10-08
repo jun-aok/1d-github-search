@@ -16,7 +16,7 @@ import { RepoList } from "./RepoList";
 import { SearchForm } from "./SearchForm";
 import { searchView, type SearchView, type SettledView } from "./searchView";
 import { useSearch } from "./useSearch";
-import type { SearchUrl } from "./useSearchUrl";
+import { useSearchUrl, type SearchUrl } from "./useSearchUrl";
 
 // 検索ページ（docs/design.md 5 節）。URL の検索条件で検索し、画面の状態に応じて 1 つを表示する
 export function SearchPage({ url }: { readonly url: SearchUrl }) {
@@ -147,4 +147,9 @@ function Faded({ busy, children }: { readonly busy: boolean; readonly children: 
       {children}
     </div>
   );
+}
+
+// 実際の URL と結び付けた検索ページ。app/page.tsx が Suspense の中で使う
+export function SearchPageFromUrl() {
+  return <SearchPage url={useSearchUrl()} />;
 }

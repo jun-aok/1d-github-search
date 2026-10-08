@@ -1,8 +1,14 @@
-// 検索ページ。本体はループの中で実装する（docs/design.md 5 節）
-export default function SearchPage() {
+import { Suspense } from "react";
+import { SearchPageFromUrl } from "@/features/search/SearchPage";
+
+// 検索ページ（docs/design.md 5 節）。データはブラウザから BFF に取りに行く。
+// useSearchParams を使う部分は Suspense で包む（production ビルドの要件）
+export default function Page() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="text-xl font-bold">GitHub Repository Search</h1>
+    <main className="max-w-3xl mx-auto px-4 py-6">
+      <Suspense>
+        <SearchPageFromUrl />
+      </Suspense>
     </main>
   );
 }
