@@ -1,11 +1,11 @@
 import { readJson } from "@/lib/http/readJson";
+import { PER_PAGE } from "@/lib/model/pagination";
 import { fail, ok, type ParseError, type Result } from "@/lib/model/result";
 import type { GitHubClient } from "./githubClient";
 import { contractViolation, type GitHubError, type GitHubResponseInfo } from "./githubError";
 import { parseGitHubRepo, parseGitHubSearch } from "./parse";
 
 const API_ORIGIN = "https://api.github.com";
-const PER_PAGE = 20;
 
 export type HttpGitHubClientOptions = {
   token?: string | undefined;

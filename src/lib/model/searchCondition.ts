@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { MAX_PAGE } from "./pagination";
 import type { DeepReadonly } from "./readonly";
 import type { ParseError, Result } from "./result";
 import { safeParse } from "./zodResult";
 
 const schema = z.object({
   query: z.string().trim().min(1).max(256),
-  page: z.number().int().min(1).max(50),
+  page: z.number().int().min(1).max(MAX_PAGE),
 });
 
 export type SearchCondition = DeepReadonly<z.infer<typeof schema>>;

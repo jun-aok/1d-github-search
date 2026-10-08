@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PER_PAGE } from "./pagination";
 import type { DeepReadonly } from "./readonly";
 import { parseRepoSummary, type RepoSummary } from "./repo";
 import { fail, ok, type ParseError, type Result } from "./result";
@@ -7,7 +8,7 @@ import { safeParse } from "./zodResult";
 // items の中身は RepoSummary のスキーマを export せず、parseRepoSummary に任せる
 const schema = z.object({
   totalCount: z.number().int().min(0),
-  items: z.array(z.unknown()).max(20),
+  items: z.array(z.unknown()).max(PER_PAGE),
 });
 
 export type SearchResult = DeepReadonly<{ totalCount: number; items: RepoSummary[] }>;
