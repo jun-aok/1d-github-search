@@ -51,4 +51,12 @@ describe("RepoDetailView", () => {
     render(<RepoDetailView repo={repoWith({ language: null })} />);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
+
+  it("「GitHub で開く」はリポジトリの URL を別タブで開く", () => {
+    render(<RepoDetailView repo={repoWith({ url: "https://github.com/react/react" })} />);
+    const link = screen.getByRole("link", { name: /GitHub で開く/ });
+    expect(link).toHaveAttribute("href", "https://github.com/react/react");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
 });

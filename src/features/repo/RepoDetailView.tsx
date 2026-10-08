@@ -27,6 +27,17 @@ export function RepoDetailView({ repo }: { readonly repo: RepoDetail }) {
         <StatCard label="Fork 数" value={repo.forks} />
         <StatCard label="Issue 数" value={repo.openIssues} />
       </dl>
+
+      <p className="mt-6 text-sm">
+        <a
+          href={repo.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 underline"
+        >
+          GitHub で開く ↗
+        </a>
+      </p>
     </section>
   );
 }
