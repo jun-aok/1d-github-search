@@ -88,7 +88,12 @@ function SearchBody({ view, ...handlers }: { readonly view: SearchView } & BodyP
       return <ListSkeleton label="検索しています" rows={PER_PAGE} />;
     case "refreshing":
       return <Settled view={view.previous} busy {...handlers} />;
-    default:
+    // 取得が終わった状態。default にせず種類を書き並べ、状態を足したときに網羅チェックで気づけるようにする
+    case "rateLimited":
+    case "failed":
+    case "empty":
+    case "outOfRange":
+    case "loaded":
       return <Settled view={view} busy={false} {...handlers} />;
   }
 }

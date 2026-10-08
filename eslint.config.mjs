@@ -22,10 +22,7 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/ban-ts-comment": "error",
-      "@typescript-eslint/switch-exhaustiveness-check": [
-        "error",
-        { considerDefaultExhaustiveForUnions: true },
-      ],
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
       // zod はモデルのファイルの中に隠す
       "no-restricted-imports": [
         "error",

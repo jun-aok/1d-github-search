@@ -45,7 +45,8 @@ export function bffError(code: ApiError["code"], status: number): Response {
 export const bffHandlers = [
   http.get(`${BFF_ORIGIN}/api/search`, ({ request }) => {
     const params = new URL(request.url).searchParams;
-    switch (params.get("q")) {
+    // q が無いときは既定の結果（キーワードではないので、文字列にそろえて default で受ける）
+    switch (params.get("q") ?? "") {
       case "__empty__":
         return HttpResponse.json(searchEmptyResult);
       case "__few__":
@@ -62,7 +63,7 @@ export const bffHandlers = [
   }),
   // 詳細は owner で切り替える（FakeGitHubClient の getRepo と同じ）
   http.get(`${BFF_ORIGIN}/api/repos/:owner/:repo`, ({ params }) => {
-    switch (params.owner) {
+    switch (params.owner ?? "") {
       case "__not_found__":
         return bffError("NOT_FOUND", 404);
       case "__rate_limited__":
