@@ -13,7 +13,7 @@ export type RepoParams = { readonly owner: string; readonly repo: string };
 // 詳細ページ（docs/design.md 5 節）。パスを RepoPath に変換し、取得の状態に応じて 1 つを表示する
 export function RepoDetailPage({ params }: { readonly params: RepoParams }) {
   const path = parseRepoPath(params);
-  const { result } = useRepo(path.ok ? path.value : null);
+  const { result, retry } = useRepo(path.ok ? path.value : null);
   // 存在し得ない名前なので、問い合わせずに見つからない扱いにする（BFF と同じ規則。docs/design.md 4 節）
   if (!path.ok) return <NotFound />;
   if (result === undefined) return <DetailSkeleton />;
@@ -24,7 +24,7 @@ export function RepoDetailPage({ params }: { readonly params: RepoParams }) {
       <ErrorMessage
         error={result.error}
         failedTitle="リポジトリ情報の取得に失敗しました"
-        onRetry={() => undefined}
+        onRetry={retry}
       />
     );
   }

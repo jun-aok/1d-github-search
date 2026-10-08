@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { bffHandlers, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
+import { BFF_ORIGIN, bffError, bffHandlers, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
 import { RepoDetailPage, type RepoParams } from "./RepoDetailPage";
 
 const server = setupServer(...bffHandlers);
@@ -76,5 +78,25 @@ describe("RepoDetailPage", () => {
     expect(alert).toHaveTextContent("リポジトリ情報の取得に失敗しました");
     expect(alert).toHaveTextContent(`問い合わせ番号: ${TEST_REQUEST_ID}`);
     expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
+  });
+
+  it("再試行ボタンでもう一度取得し、一時的な失敗なら詳細の表示に回復する", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${BFF_ORIGIN}/api/repos/:owner/:repo`, () => bffError("UPSTREAM_ERROR", 502), {
+        once: true,
+      }),
+    );
+    renderPage({ owner: "react", repo: "react" });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "リポジトリ情報の取得に失敗しました",
+    );
+
+    await user.click(screen.getByRole("button", { name: "再試行" }));
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "react/react" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(requests).toHaveLength(2);
   });
 });

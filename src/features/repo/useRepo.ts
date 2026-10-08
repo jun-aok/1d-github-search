@@ -10,6 +10,8 @@ import type { Result } from "@/lib/model/result";
 export type RepoState = {
   // 取得が終わるまでは undefined
   readonly result: Result<RepoDetail, ApiError> | undefined;
+  // 再試行ボタン。同じリポジトリをもう一度取得する
+  readonly retry: () => void;
 };
 
 // 詳細の取得（docs/design.md 5 節）。path が null（パスが RepoPath にならない）なら取得しない
@@ -21,5 +23,11 @@ export function useRepo(path: RepoPath | null): RepoState {
     // 失敗は例外にならないので TanStack Query の再試行は効かない。再試行は利用者のボタン操作
     retry: false,
   });
-  return { result: query.data };
+  const { refetch } = query;
+  return {
+    result: query.data,
+    retry: () => {
+      void refetch();
+    },
+  };
 }
