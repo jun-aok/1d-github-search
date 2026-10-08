@@ -258,6 +258,32 @@ describe("SearchPage", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("結果 → 初期画面 → 別のキーワード、と進んだときは、前の結果を出さずスケルトンを出す", async () => {
+    const queryClient = new QueryClient();
+    const at = (condition: SearchUrl["condition"]) => (
+      <QueryClientProvider client={queryClient}>
+        <SearchPage url={{ condition, navigate: vi.fn() }} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(at(ok(aSearchCondition("react"))));
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    rerender(at(null));
+    expect(screen.getByText(guideText)).toBeInTheDocument();
+
+    const hold = holdNextSearch();
+    rerender(at(ok(aSearchCondition("vue"))));
+    await waitFor(() => {
+      expect(requests).toHaveLength(2);
+    });
+    expect(screen.getByText("検索しています")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { busy: true })).toBeNull();
+    expect(screen.queryByText("7,297,834 件中 1〜20 件を表示")).toBeNull();
+
+    hold.release();
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    expect(screen.queryByText("検索しています")).toBeNull();
+  });
+
   it("URL が前の条件に戻ったとき（ブラウザバック）、成功した結果は覚えていて取り直さず、失敗した結果は取り直す", async () => {
     const queryClient = new QueryClient();
     const at = (condition: SearchCondition) => (
