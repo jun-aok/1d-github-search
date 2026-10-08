@@ -46,6 +46,7 @@ export function searchView(input: SearchViewInput): SearchView {
 function settledView({ condition, result }: SearchResponse): SettledView {
   if (!result.ok) throw new Error("not implemented");
   const value = result.value;
+  if (value.totalCount === 0) return { kind: "empty", query: condition.query };
   return {
     kind: "loaded",
     result: value,

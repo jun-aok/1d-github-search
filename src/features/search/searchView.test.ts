@@ -43,4 +43,15 @@ describe("searchView", () => {
       range: { from: 21, to: 40 },
     });
   });
+
+  it("totalCount が 0 なら 0 件（empty）。案内に出すキーワードは応答の条件のもの", () => {
+    const condition = aSearchCondition("__empty__");
+    expect(
+      searchView({
+        condition: ok(condition),
+        response: { condition, result: ok(searchEmptyResult) },
+        isFetching: false,
+      }),
+    ).toEqual({ kind: "empty", query: "__empty__" });
+  });
 });
