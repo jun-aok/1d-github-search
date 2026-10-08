@@ -46,4 +46,9 @@ describe("RepoDetailView", () => {
       "999",
     ]);
   });
+
+  it("言語が null なら「—」を表示する", () => {
+    render(<RepoDetailView repo={repoWith({ language: null })} />);
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
 });

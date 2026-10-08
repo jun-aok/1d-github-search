@@ -16,7 +16,7 @@ export function RepoDetailView({ repo }: { readonly repo: RepoDetail }) {
         />
         <div className="min-w-0">
           <h1 className="text-2xl font-bold break-all">{repo.fullName}</h1>
-          <p className="mt-1 text-gray-600">{repo.language}</p>
+          <p className="mt-1 text-gray-600">{repo.language ?? "—"}</p>
         </div>
       </div>
       <p className="mt-4 text-gray-700">{repo.description ?? ""}</p>
