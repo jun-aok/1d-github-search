@@ -41,4 +41,24 @@ describe("parseRepoPath", () => {
       expect(parseRepoPath(input).ok).toBe(true);
     });
   });
+
+  describe("長さの上限（owner 39 文字、name 100 文字）", () => {
+    it.each([
+      ["owner 39 文字", { owner: "a".repeat(39), repo: "react" }, true],
+      ["owner 40 文字", { owner: "a".repeat(40), repo: "react" }, false],
+      ["repo 100 文字", { owner: "facebook", repo: "a".repeat(100) }, true],
+      ["repo 101 文字", { owner: "facebook", repo: "a".repeat(101) }, false],
+    ])("%s", (_name, input, expected) => {
+      expect(parseRepoPath(input).ok).toBe(expected);
+    });
+  });
+
+  it("owner か repo が文字列でなければ失敗し、path に項目名が入る", () => {
+    const r = parseRepoPath({ owner: 1, repo: "react" });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.issues[0]?.path).toBe("owner");
+    expect(parseRepoPath({ owner: "facebook" }).ok).toBe(false);
+    expect(parseRepoPath(null).ok).toBe(false);
+  });
 });
