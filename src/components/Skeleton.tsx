@@ -20,3 +20,24 @@ export function ListSkeleton({ label, rows }: { readonly label: string; readonly
     </section>
   );
 }
+
+// 詳細の読み込み中（スケルトン）。クラス構成は mock/detail.html のまま
+export function DetailSkeleton() {
+  return (
+    <section className="animate-pulse" aria-busy="true">
+      <p className="sr-only">読み込んでいます</p>
+      <div className="flex items-center gap-4">
+        <div className="h-16 w-16 rounded-full bg-gray-200"></div>
+        <div className="space-y-2">
+          <div className="h-6 w-48 rounded bg-gray-200"></div>
+          <div className="h-4 w-24 rounded bg-gray-200"></div>
+        </div>
+      </div>
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="h-20 rounded-lg bg-gray-200"></div>
+        ))}
+      </div>
+    </section>
+  );
+}
