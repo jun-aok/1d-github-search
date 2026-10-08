@@ -269,7 +269,7 @@ type ErrorResponse = { error: ApiError };   // エラー応答の JSON。成功�
   - 検索の `queryFn` は、その `Result` に取得した条件を添えた `{ condition, result }` を返す → 理由: 前の結果を薄く表示している間は URL の条件と表示中の結果の条件が違う。件数・ページ番号・ページ送りの移動先は、表示中の結果の条件から求める
   - 取得中は `placeholderData: keepPreviousData` で前の結果を保持し、薄く表示する。ページ送りでも、別のキーワードの検索でも、同じキーワードの再検索でも同じ扱い → 理由: 薄くなっていれば読み込み中だと分かる。場面ごとに見せ方を変える必要がない
     - 一覧はモックどおり `<ul>` を薄くする。エラー・0 件・範囲外の表示は、取得中だけ `opacity-50` と `aria-busy` を付けた `<div>` で包む（`Faded`）
-    - 詳細ページも同じ扱いにする。前の失敗（エラー・見つからない）を表示したまま取り直す間（もう一度開いた直後・再試行の直後）は `Faded` で包む → 理由: 失敗は覚えないが `data` には残るので、包まないと前回のエラーが現在のものに見える
+    - 詳細ページも同じ扱いにする。前の結果を表示したまま取り直す間は `Faded` で包む。前の失敗（エラー・見つからない）をもう一度開いた直後・再試行の直後と、成功した結果が古くなって（60 秒後）開き直した直後 → 理由: 失敗は覚えないが `data` には残るので、包まないと前回のエラーが現在のものに見える
     - 初期画面（条件なし）を挟んだら、前の結果は無い扱いにしてスケルトンを出す。`keepPreviousData` は「最後にデータを持っていた問い合わせ」のデータを返すので（TanStack Query 5.104 で確認）、条件なしの問い合わせに `initialData: null` を持たせ、前が `null` なら何も残さない `keepPreviousResult` を `placeholderData` に使う
   - 自動の再試行はしない（`retry: false`）。再試行は利用者のボタン操作（`refetch`）→ 理由: `Result` 方式では失敗が例外にならず、TanStack Query の再試行が効かない。レート制限中の自動再試行は逆効果でもある
   - ウィンドウに戻ったとき・通信が戻ったときも自動で取り直さない（`QueryClient` の既定で `refetchOnWindowFocus: false`、`refetchOnReconnect: false`）→ 理由: 失敗は覚えない（`staleTime` 0）ので、既定のままだとタブを行き来するたびにレート制限中の GitHub を叩き直す
@@ -365,7 +365,7 @@ page.tsx
   | エラーの詳細（`ApiError.detail`、スタック） | 画面に表示する | 応答にも画面にも出さない |
   | エラーログ | console（標準出力 / 標準エラー）に JSON 1 行 | console（標準出力 / 標準エラー）に JSON 1 行 |
 
-- 環境変数は `lib/env.ts` で `Env` に変換し、`next.config.ts` から import する → 理由: `next build` と `next start` の両方で評価されるので、トークンの設定漏れがデプロイ時に止まる。リクエストが来てから気づくことがない
+- 環境変数は `lib/env.ts` で `Env` に変換し、`next.config.ts` から import する。`parseEnv` は他のモデルと同じく `Result` を返し、例外を投げるのはモジュールの最上位の `env` だけ（ビルドと起動を止めるため）→ 理由: `next build` と `next start` の両方で評価されるので、トークンの設定漏れがデプロイ時に止まる。リクエストが来てから気づくことがない
   - エラーメッセージは「`GITHUB_TOKEN` が未設定です。… を参照」のように、何をすればよいか分かる文にする
   - CI のビルドと E2E は `GITHUB_CLIENT=fake` で行う（GitHub を呼ばず、トークンも不要）
   - `.env.example` に記載。`NEXT_PUBLIC_` は付けない
@@ -391,7 +391,7 @@ page.tsx
 | `respond.ts` | 単体（純粋関数） | `kind` ごとのステータスと `code`（`RepoPath` の失敗は 404）、development / production での `detail` の有無 |
 | 画面の状態を求める純粋関数 | 単体 | 条件ごとの状態（不正 URL、範囲外、前の結果の有無）|
 | `withErrorHandling` | 単体（`logger` / `reporter` を `memory.ts` に、処理をわざと失敗・例外にする） | `requestId` がヘッダー・JSON・ログで一致、`warn` / `error` の使い分け、例外が 500 になり本文に漏れない |
-| `env.ts` | 単体 | production + http でトークン無しは失敗、production + fake は通る、development では通る |
+| `env.ts` | 単体 | production + http でトークン無し・空文字は失敗（メッセージに `GITHUB_TOKEN` と対処法）、production + fake は通る、development・test は通る、値が不正なら失敗 |
 | E2E の追加シナリオ | E2E | 不正 URL → `/` に戻る、範囲外ページ、詳細の 404・レート制限・直接アクセス、モバイル幅 |
 | モックとの一致 | E2E（DOM 比較） | 下記 |
 | 検索 → 一覧 → 詳細 → 戻る | E2E（Playwright。production ビルド + `GITHUB_CLIENT=fake`） | 検索状態が戻ること、ページ送り、0 件、エラー表示、モバイル幅 |
