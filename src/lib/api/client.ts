@@ -59,6 +59,9 @@ export function fetchSearch(condition: SearchCondition): Promise<Result<SearchRe
   return getFromBff(`/api/search?${toSearchParams(condition).toString()}`, parseSearchResult);
 }
 
+// RepoPath は # や ? を通すので、各部を URL の 1 区切りとして符号化する
 export function fetchRepo(path: RepoPath): Promise<Result<RepoDetail, ApiError>> {
-  return getFromBff(`/api/repos/${path.owner}/${path.name}`, parseRepoDetail);
+  const owner = encodeURIComponent(path.owner);
+  const name = encodeURIComponent(path.name);
+  return getFromBff(`/api/repos/${owner}/${name}`, parseRepoDetail);
 }

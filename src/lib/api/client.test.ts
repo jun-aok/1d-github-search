@@ -90,4 +90,16 @@ describe("fetchRepo", () => {
     const result = await fetchRepo(aRepoPath("react", "react"));
     expect(result).toEqual({ ok: true, value: repoReactReactDetail });
   });
+
+  it("owner と name はそれぞれ URL の 1 区切りとして符号化して送る", async () => {
+    const paths: string[] = [];
+    server.use(
+      http.get(`${BFF_ORIGIN}/api/repos/:owner/:repo`, ({ request }) => {
+        paths.push(new URL(request.url).pathname);
+        return HttpResponse.json(repoReactReactDetail);
+      }),
+    );
+    await fetchRepo(aRepoPath("a#b", "c?d%e"));
+    expect(paths).toEqual(["/api/repos/a%23b/c%3Fd%25e"]);
+  });
 });
