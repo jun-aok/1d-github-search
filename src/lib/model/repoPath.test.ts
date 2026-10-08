@@ -1,4 +1,4 @@
-import { parseRepoPath } from "./repoPath";
+import { parseEncodedRepoPath, parseRepoPath } from "./repoPath";
 
 describe("parseRepoPath", () => {
   it("owner と repo を RepoPath（owner, name）にする", () => {
@@ -60,5 +60,14 @@ describe("parseRepoPath", () => {
     expect(r.error.issues[0]?.path).toBe("owner");
     expect(parseRepoPath({ owner: "facebook" }).ok).toBe(false);
     expect(parseRepoPath(null).ok).toBe(false);
+  });
+});
+
+describe("parseEncodedRepoPath（URL のパスの値。符号化されたまま届く）", () => {
+  it("1 回だけ復号してから RepoPath にする", () => {
+    expect(parseEncodedRepoPath({ owner: "my%2Dorg", repo: "%E3%83%AA%2525" })).toEqual({
+      ok: true,
+      value: { owner: "my-org", name: "リ%25" },
+    });
   });
 });
