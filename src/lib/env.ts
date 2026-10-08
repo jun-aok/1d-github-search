@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ok, type ParseError, type Result } from "./model/result";
+import { safeParse } from "./model/zodResult";
 
 // 環境変数の検証（docs/design.md 6 節）。next.config.ts から import され、ビルド時・起動時に評価される
 const schema = z
@@ -25,20 +27,28 @@ export type Env = Readonly<{
   githubToken: string | undefined;
 }>;
 
-export function parseEnv(source: Readonly<Record<string, string | undefined>>): Env {
-  const r = schema.safeParse({
+export function parseEnv(
+  source: Readonly<Record<string, string | undefined>>,
+): Result<Env, ParseError> {
+  const r = safeParse(schema, {
     NODE_ENV: source.NODE_ENV === "" ? undefined : source.NODE_ENV,
     GITHUB_CLIENT: source.GITHUB_CLIENT === "" ? undefined : source.GITHUB_CLIENT,
     GITHUB_TOKEN: source.GITHUB_TOKEN === "" ? undefined : source.GITHUB_TOKEN,
   });
-  if (!r.success) {
-    throw new Error(`環境変数が不正です:\n${z.prettifyError(r.error)}`);
-  }
-  return {
-    nodeEnv: r.data.NODE_ENV,
-    githubClient: r.data.GITHUB_CLIENT,
-    githubToken: r.data.GITHUB_TOKEN,
-  };
+  if (!r.ok) return r;
+  return ok({
+    nodeEnv: r.value.NODE_ENV,
+    githubClient: r.value.GITHUB_CLIENT,
+    githubToken: r.value.GITHUB_TOKEN,
+  });
 }
 
-export const env: Env = parseEnv(process.env);
+// ビルド・起動を止めるために、モジュールの最上位の env だけが例外を投げる（docs/design.md 6 節）
+function envOrThrow(source: Readonly<Record<string, string | undefined>>): Env {
+  const r = parseEnv(source);
+  if (r.ok) return r.value;
+  const lines = r.error.issues.map((i) => `- ${i.path}: ${i.message}`);
+  throw new Error(`環境変数が不正です:\n${lines.join("\n")}`);
+}
+
+export const env: Env = envOrThrow(process.env);

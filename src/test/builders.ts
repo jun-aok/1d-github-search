@@ -22,7 +22,9 @@ export function anEnv(vars: {
   GITHUB_CLIENT: Env["githubClient"];
   GITHUB_TOKEN?: string;
 }): Env {
-  return parseEnv(vars);
+  const r = parseEnv(vars);
+  if (!r.ok) throw new Error(`テストの環境変数が不正です: ${JSON.stringify(r.error.issues)}`);
+  return r.value;
 }
 
 // BFF のエラー応答の ApiError。モデルの createErrorResponse から作る
