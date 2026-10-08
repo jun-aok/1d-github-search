@@ -1,11 +1,17 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { BFF_ORIGIN, bffHandlers, searchReactResult, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
+import {
+  BFF_ORIGIN,
+  bffHandlers,
+  repoReactReactDetail,
+  searchReactResult,
+  TEST_REQUEST_ID,
+} from "@/mocks/bffHandlers";
 import type { ApiError } from "@/lib/model/apiError";
 import type { Result } from "@/lib/model/result";
-import { aSearchCondition } from "@/test/builders";
-import { fetchSearch } from "./client";
+import { aRepoPath, aSearchCondition } from "@/test/builders";
+import { fetchRepo, fetchSearch } from "./client";
 
 const server = setupServer(...bffHandlers);
 
@@ -76,5 +82,12 @@ describe("fetchSearch", () => {
     expect(error.code).toBe("UPSTREAM_ERROR");
     expect(error.requestId).toBeUndefined();
     expect(error.detail).toContain("totalCount");
+  });
+});
+
+describe("fetchRepo", () => {
+  it("BFF の成功応答を RepoDetail にして返す", async () => {
+    const result = await fetchRepo(aRepoPath("react", "react"));
+    expect(result).toEqual({ ok: true, value: repoReactReactDetail });
   });
 });

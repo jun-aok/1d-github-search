@@ -1,12 +1,14 @@
 import { http, HttpResponse } from "msw";
-import { parseGitHubSearch } from "@/lib/github/parse";
+import { parseGitHubRepo, parseGitHubSearch } from "@/lib/github/parse";
 import { createErrorResponse, type ApiError } from "@/lib/model/apiError";
+import type { RepoDetail } from "@/lib/model/repo";
 import { parseSearchResult, type SearchResult } from "@/lib/model/searchResult";
+import repoReactReact from "./fixtures/repo-react-react.json";
 import searchFew from "./fixtures/search-few.json";
 import searchReact from "./fixtures/search-react.json";
 
 // BFF の形で応答する MSW のハンドラ。コンポーネントテストが使う（docs/design.md 7 節）。
-// 切り替えのキーワードは FakeGitHubClient と同じ（__empty__ / __few__ / __rate_limited__ / __error__）
+// 切り替えのキーワードは FakeGitHubClient と同じ（検索は __empty__ / __few__ / __rate_limited__ / __error__、詳細は owner の __not_found__ / __rate_limited__ / __error__）
 
 // jsdom の window.location.origin（vitest.config.ts の environmentOptions）
 export const BFF_ORIGIN = "http://localhost:3000";
@@ -25,6 +27,13 @@ export const searchEmptyResult = searchResultFrom(parseSearchResult({ totalCount
 export const searchOutOfRangeResult = searchResultFrom(
   parseSearchResult({ totalCount: searchFewResult.totalCount, items: [] }),
 );
+
+function repoDetailFrom(result: ReturnType<typeof parseGitHubRepo>): RepoDetail {
+  if (!result.ok) throw new Error(`テストのリポジトリが不正です: ${JSON.stringify(result.error)}`);
+  return result.value;
+}
+
+export const repoReactReactDetail = repoDetailFrom(parseGitHubRepo(repoReactReact));
 
 export function bffError(code: ApiError["code"], status: number): Response {
   return HttpResponse.json(
@@ -49,6 +58,19 @@ export const bffHandlers = [
         return bffError("UPSTREAM_ERROR", 502);
       default:
         return HttpResponse.json(searchReactResult);
+    }
+  }),
+  // 詳細は owner で切り替える（FakeGitHubClient の getRepo と同じ）
+  http.get(`${BFF_ORIGIN}/api/repos/:owner/:repo`, ({ params }) => {
+    switch (params.owner) {
+      case "__not_found__":
+        return bffError("NOT_FOUND", 404);
+      case "__rate_limited__":
+        return bffError("RATE_LIMITED", 429);
+      case "__error__":
+        return bffError("UPSTREAM_ERROR", 502);
+      default:
+        return HttpResponse.json(repoReactReactDetail);
     }
   }),
 ];

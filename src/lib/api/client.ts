@@ -1,5 +1,7 @@
 import { readJson } from "@/lib/http/readJson";
 import { createClientError, parseErrorResponse, type ApiError } from "@/lib/model/apiError";
+import { parseRepoDetail, type RepoDetail } from "@/lib/model/repo";
+import type { RepoPath } from "@/lib/model/repoPath";
 import { fail, type ParseError, type Result } from "@/lib/model/result";
 import { toSearchParams, type SearchCondition } from "@/lib/model/searchCondition";
 import { parseSearchResult, type SearchResult } from "@/lib/model/searchResult";
@@ -55,4 +57,8 @@ async function getFromBff<T>(
 
 export function fetchSearch(condition: SearchCondition): Promise<Result<SearchResult, ApiError>> {
   return getFromBff(`/api/search?${toSearchParams(condition).toString()}`, parseSearchResult);
+}
+
+export function fetchRepo(path: RepoPath): Promise<Result<RepoDetail, ApiError>> {
+  return getFromBff(`/api/repos/${path.owner}/${path.name}`, parseRepoDetail);
 }
