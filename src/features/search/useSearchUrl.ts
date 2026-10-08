@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { ParseError, Result } from "@/lib/model/result";
 import { searchConditionFromParams, type SearchCondition } from "@/lib/model/searchCondition";
 
@@ -22,6 +22,13 @@ function conditionOf(params: URLSearchParams): SearchUrl["condition"] {
 export function useSearchUrl(): SearchUrl {
   const params = useSearchParams();
   const condition = useMemo(() => conditionOf(new URLSearchParams(params)), [params]);
+
+  // 不正な URL は検索せず初期画面にする。アドレスバーも / に直して表示と一致させる。
+  // 書き換えを useSearchParams が検知して、condition は null になる
+  useEffect(() => {
+    if (condition !== null && !condition.ok) window.history.replaceState(null, "", "/");
+  }, [condition]);
+
   return {
     condition,
     navigate: () => {
