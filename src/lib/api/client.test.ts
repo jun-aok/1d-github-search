@@ -1,12 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import {
-  BFF_ORIGIN,
-  bffHandlers,
-  searchReactResult,
-  TEST_REQUEST_ID,
-} from "@/mocks/bffHandlers";
+import { BFF_ORIGIN, bffHandlers, searchReactResult, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
 import type { ApiError } from "@/lib/model/apiError";
 import type { Result } from "@/lib/model/result";
 import { aSearchCondition } from "@/test/builders";
@@ -59,5 +54,15 @@ describe("fetchSearch", () => {
     const error = errorOf(await fetchSearch(aSearchCondition("react")));
     expect(error.code).toBe("UPSTREAM_ERROR");
     expect(error.requestId).toBeUndefined();
+  });
+
+  it("成功応答の形が SearchResult と違うときは、どの項目が違うかを detail に入れた失敗を返す", async () => {
+    server.use(
+      http.get(`${BFF_ORIGIN}/api/search`, () => HttpResponse.json({ totalCount: -1, items: [] })),
+    );
+    const error = errorOf(await fetchSearch(aSearchCondition("react")));
+    expect(error.code).toBe("UPSTREAM_ERROR");
+    expect(error.requestId).toBeUndefined();
+    expect(error.detail).toContain("totalCount");
   });
 });
