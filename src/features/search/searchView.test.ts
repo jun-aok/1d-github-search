@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { fail, ok } from "@/lib/model/result";
-import { searchEmptyResult, searchReactResult } from "@/mocks/bffHandlers";
+import {
+  searchEmptyResult,
+  searchOutOfRangeResult,
+  searchReactResult,
+} from "@/mocks/bffHandlers";
 import { aSearchCondition } from "@/test/builders";
 import { searchView } from "./searchView";
 
@@ -53,5 +57,20 @@ describe("searchView", () => {
         isFetching: false,
       }),
     ).toEqual({ kind: "empty", query: "__empty__" });
+  });
+
+  it("件数はあるが items が空（総ページ数を超えるページ）なら範囲外（outOfRange）。「前へ」は最終ページ", () => {
+    const condition = aSearchCondition("__few__", 3);
+    expect(
+      searchView({
+        condition: ok(condition),
+        response: { condition, result: ok(searchOutOfRangeResult) },
+        isFetching: false,
+      }),
+    ).toEqual({
+      kind: "outOfRange",
+      totalCount: 2,
+      pagination: { page: 3, totalPages: 1, prevPage: 1, nextPage: null },
+    });
   });
 });

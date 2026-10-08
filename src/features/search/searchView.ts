@@ -47,10 +47,14 @@ function settledView({ condition, result }: SearchResponse): SettledView {
   if (!result.ok) throw new Error("not implemented");
   const value = result.value;
   if (value.totalCount === 0) return { kind: "empty", query: condition.query };
+  const pages = pagination(condition, value.totalCount);
+  if (value.items.length === 0) {
+    return { kind: "outOfRange", totalCount: value.totalCount, pagination: pages };
+  }
   return {
     kind: "loaded",
     result: value,
-    pagination: pagination(condition, value.totalCount),
+    pagination: pages,
     range: resultRange(condition, value.items.length),
   };
 }
