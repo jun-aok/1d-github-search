@@ -6,6 +6,9 @@ import { safeParse } from "./zodResult";
 const errorSchema = z.object({
   code: z.enum(["BAD_REQUEST", "NOT_FOUND", "RATE_LIMITED", "UPSTREAM_ERROR", "INTERNAL_ERROR"]),
   message: z.string(),
+  requestId: z.string().optional(),
+  detail: z.string().optional(),
+  retryAfter: z.number().int().min(0).optional(),
 });
 
 const responseSchema = z.object({ error: errorSchema });
