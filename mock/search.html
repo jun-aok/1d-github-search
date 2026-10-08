@@ -136,7 +136,7 @@
       const view = state === "refreshing" || state === "few" ? "results" : state;
       document.querySelector(`[data-view="${view}"]`).classList.remove("hidden");
 
-      q.value = state === "initial" ? "" : state === "empty" ? "__empty__" : state === "few" || state === "outofrange" ? "__few__" : "react";
+      q.value = state === "initial" ? "" : state === "empty" ? "__empty__" : state === "few" || state === "outofrange" ? "__few__" : state === "ratelimit" ? "__rate_limited__" : state === "error" ? "__error__" : "react";
       submit.disabled = state === "initial" || state === "loading" || state === "refreshing";
 
       if (state === "loading") {
