@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   BFF_ORIGIN,
   bffError,
@@ -144,6 +144,34 @@ describe("RepoDetailPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "react/react" })).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(requests).toHaveLength(1);
+  });
+
+  it("成功した結果が古くなって（60 秒過ぎて）から開き直した直後は、取り直す間その詳細を薄くして残す", async () => {
+    const queryClient = new QueryClient();
+    const heading = { level: 1, name: "react/react" } as const;
+    const first = renderPage({ owner: "react", repo: "react" }, queryClient);
+    await screen.findByRole("heading", heading);
+    first.unmount();
+
+    // 時計だけを進める（MSW の待ちは本物のタイマーのまま）
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(Date.now() + 61_000);
+      const hold = holdNextRepo(() => HttpResponse.json(repoReactReactDetail));
+      renderPage({ owner: "react", repo: "react" }, queryClient);
+      const faded = screen.getByRole("heading", heading).closest("section")?.parentElement;
+      expect(faded).toHaveClass("opacity-50");
+      expect(faded).toHaveAttribute("aria-busy", "true");
+
+      hold.release();
+      await waitFor(() => {
+        expect(document.querySelector("[aria-busy]")).toBeNull();
+      });
+      expect(screen.getByRole("heading", heading)).toBeInTheDocument();
+      expect(requests).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("失敗は覚えておかず、もう一度表示するときは必ず取得し直す", async () => {

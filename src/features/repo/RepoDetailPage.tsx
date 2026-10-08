@@ -18,22 +18,22 @@ export function RepoDetailPage({ params }: { readonly params: RepoParams }) {
   // 存在し得ない名前なので、問い合わせずに見つからない扱いにする（BFF と同じ規則。docs/design.md 4 節）
   if (!path.ok) return <NotFound />;
   if (result === undefined) return <DetailSkeleton />;
-  if (!result.ok) {
-    // 失敗は覚えないので、もう一度開いた直後や再試行の直後は取り直す。その間は前の失敗を薄くして残す（検索ページと同じ）
-    return (
-      <Faded busy={isFetching}>
-        {result.error.code === "NOT_FOUND" ? (
-          <NotFound />
-        ) : (
-          // レート制限の文言は ErrorMessage が検索ページと同じものを出す
-          <ErrorMessage
-            error={result.error}
-            failedTitle="リポジトリ情報の取得に失敗しました"
-            onRetry={retry}
-          />
-        )}
-      </Faded>
-    );
-  }
-  return <RepoDetailView repo={result.value} />;
+  // 取り直す間（失敗をもう一度開いた直後・再試行の直後、古くなった成功を開き直した直後）は、前の結果を薄くして残す
+  // （検索ページと同じ）。取得中でなければ Faded は何も足さないので、モックと同じ DOM のまま
+  return (
+    <Faded busy={isFetching}>
+      {result.ok ? (
+        <RepoDetailView repo={result.value} />
+      ) : result.error.code === "NOT_FOUND" ? (
+        <NotFound />
+      ) : (
+        // レート制限の文言は ErrorMessage が検索ページと同じものを出す
+        <ErrorMessage
+          error={result.error}
+          failedTitle="リポジトリ情報の取得に失敗しました"
+          onRetry={retry}
+        />
+      )}
+    </Faded>
+  );
 }
