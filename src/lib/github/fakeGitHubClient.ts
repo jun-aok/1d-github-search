@@ -2,8 +2,8 @@ import repoReactReact from "@/mocks/fixtures/repo-react-react.json";
 import searchFew from "@/mocks/fixtures/search-few.json";
 import searchReact from "@/mocks/fixtures/search-react.json";
 import type { RepoDetail } from "@/lib/model/repo";
-import { fail, ok, type Result } from "@/lib/model/result";
-import type { SearchResult } from "@/lib/model/searchResult";
+import { fail, type Result } from "@/lib/model/result";
+import { parseSearchResult, type SearchResult } from "@/lib/model/searchResult";
 import type { GitHubClient } from "./githubClient";
 import { contractViolation, type GitHubError } from "./githubError";
 import { parseGitHubRepo, parseGitHubSearch } from "./parse";
@@ -20,18 +20,26 @@ function fromFixture(input: unknown): Result<SearchResult, GitHubError> {
   return r.ok ? r : fail(contractViolation(r.error));
 }
 
+// fixture に無い形（0 件、範囲外のページ）も、モデルの parse を通して作る（docs/design.md 3 節）
+function fromModel(input: unknown): Result<SearchResult, GitHubError> {
+  const r = parseSearchResult(input);
+  return r.ok ? r : fail(contractViolation(r.error));
+}
+
 // 検索キーワードと owner で応答を切り替える偽物（docs/design.md 4 節）。E2E と Route Handler の単体テストで使う
 export function createFakeGitHubClient(): GitHubClient {
   return {
     search(condition) {
       switch (condition.query) {
         case "__empty__":
-          return Promise.resolve(ok({ totalCount: 0, items: [] }));
+          return Promise.resolve(fromModel({ totalCount: 0, items: [] }));
         case "__few__": {
           // GitHub と同じく、範囲外のページは 200・件数あり・items 空
           const r = fromFixture(searchFew);
           return Promise.resolve(
-            r.ok && condition.page > 1 ? ok({ totalCount: r.value.totalCount, items: [] }) : r,
+            r.ok && condition.page > 1
+              ? fromModel({ totalCount: r.value.totalCount, items: [] })
+              : r,
           );
         }
         case "__rate_limited__":

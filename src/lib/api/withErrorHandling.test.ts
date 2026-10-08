@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import type { Env } from "@/lib/env";
+import { anEnv } from "@/test/builders";
 import { createFakeGitHubClient } from "@/lib/github/fakeGitHubClient";
 import { fail, ok } from "@/lib/model/result";
 import { createMemoryLogger, createMemoryReporter } from "@/lib/observability/memory";
@@ -9,10 +9,10 @@ import type { AppError } from "./appError";
 import { withErrorHandling, type Deps, type Handler } from "./withErrorHandling";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const production: Env = { nodeEnv: "production", githubClient: "fake", githubToken: undefined };
-const development: Env = { nodeEnv: "development", githubClient: "fake", githubToken: undefined };
+const production = anEnv({ NODE_ENV: "production", GITHUB_CLIENT: "fake" });
+const development = anEnv({ NODE_ENV: "development", GITHUB_CLIENT: "fake" });
 
-function setup(env: Env = production) {
+function setup(env = production) {
   const logger = createMemoryLogger();
   const reporter = createMemoryReporter();
   const deps: Deps = { github: createFakeGitHubClient(), logger, reporter, env };

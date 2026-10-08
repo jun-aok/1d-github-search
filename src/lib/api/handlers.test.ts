@@ -1,16 +1,16 @@
 // @vitest-environment node
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import type { Env } from "@/lib/env";
 import { createFakeGitHubClient } from "@/lib/github/fakeGitHubClient";
 import type { GitHubClient } from "@/lib/github/githubClient";
 import { createMemoryLogger, createMemoryReporter } from "@/lib/observability/memory";
 import type { RepoPath } from "@/lib/model/repoPath";
 import type { SearchCondition } from "@/lib/model/searchCondition";
+import { aSearchCondition, anEnv } from "@/test/builders";
 import { handleRepo, handleSearch } from "./handlers";
 import type { Deps } from "./withErrorHandling";
 
-const env: Env = { nodeEnv: "test", githubClient: "fake", githubToken: undefined };
+const env = anEnv({ NODE_ENV: "test", GITHUB_CLIENT: "fake" });
 
 // 呼ばれた引数を記録しつつ、応答は偽物に任せる
 function recordingDeps() {
@@ -59,7 +59,7 @@ describe("handleSearch", () => {
     const result = await search("?q=react&page=2", deps);
 
     expect(searches).toEqual([{ query: "react", page: 2 }]);
-    expect(result).toEqual(await createFakeGitHubClient().search({ query: "react", page: 2 }));
+    expect(result).toEqual(await createFakeGitHubClient().search(aSearchCondition("react", 2)));
   });
 
   it("page を省略すると 1 ページ目", async () => {

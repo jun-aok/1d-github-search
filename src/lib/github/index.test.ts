@@ -2,10 +2,9 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import type { Env } from "@/lib/env";
 import { GITHUB_API, githubHandlers } from "@/mocks/githubHandlers";
 import { createMemoryLogger } from "@/lib/observability/memory";
-import { aSearchCondition } from "@/test/builders";
+import { aSearchCondition, anEnv } from "@/test/builders";
 import { createGitHubClient } from "./index";
 
 const server = setupServer(...githubHandlers);
@@ -19,13 +18,14 @@ afterAll(() => {
   server.close();
 });
 
-const baseEnv: Env = { nodeEnv: "development", githubClient: "http", githubToken: undefined };
-
 describe("createGitHubClient", () => {
   it("fake なら偽の GitHub を返し、起動時に警告ログを 1 回出す", async () => {
     const logger = createMemoryLogger();
 
-    const github = createGitHubClient({ ...baseEnv, githubClient: "fake" }, logger);
+    const github = createGitHubClient(
+      anEnv({ NODE_ENV: "development", GITHUB_CLIENT: "fake" }),
+      logger,
+    );
 
     expect(logger.entries).toHaveLength(1);
     expect(logger.entries[0]?.level).toBe("warn");
@@ -46,7 +46,10 @@ describe("createGitHubClient", () => {
       }),
     );
 
-    const github = createGitHubClient({ ...baseEnv, githubToken: "env-token" }, logger);
+    const github = createGitHubClient(
+      anEnv({ NODE_ENV: "development", GITHUB_CLIENT: "http", GITHUB_TOKEN: "env-token" }),
+      logger,
+    );
     await github.search(aSearchCondition("react"));
 
     expect(authorizations).toEqual(["Bearer env-token"]);

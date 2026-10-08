@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { Env } from "@/lib/env";
+import { anEnv } from "@/test/builders";
 import type { AppError } from "./appError";
 import { respond } from "./respond";
 
-const development: Env = { nodeEnv: "development", githubClient: "http", githubToken: undefined };
-const production: Env = { nodeEnv: "production", githubClient: "http", githubToken: "t" };
+const development = anEnv({ NODE_ENV: "development", GITHUB_CLIENT: "http" });
+const production = anEnv({ NODE_ENV: "production", GITHUB_CLIENT: "http", GITHUB_TOKEN: "t" });
 
 async function bodyOf(response: Response): Promise<unknown> {
   return response.json();
@@ -76,7 +76,7 @@ describe("respond: AppError → HTTP 応答", () => {
   });
 
   it("test 環境も development と同じ扱いで detail を含める", async () => {
-    const env: Env = { ...development, nodeEnv: "test" };
+    const env = anEnv({ NODE_ENV: "test", GITHUB_CLIENT: "http" });
 
     const response = respond({ kind: "bad_request", detail: "q が空です" }, "req-1", env);
 

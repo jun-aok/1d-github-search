@@ -1,3 +1,4 @@
+import { parseEnv, type Env } from "@/lib/env";
 import { parseRepoPath, type RepoPath } from "@/lib/model/repoPath";
 import { parseSearchCondition, type SearchCondition } from "@/lib/model/searchCondition";
 
@@ -12,4 +13,13 @@ export function aRepoPath(owner: string, repo: string): RepoPath {
   const r = parseRepoPath({ owner, repo });
   if (!r.ok) throw new Error(`テストのリポジトリ指定が不正です: ${JSON.stringify(r.error.issues)}`);
   return r.value;
+}
+
+// Env も環境変数の形から parseEnv を通して作る
+export function anEnv(vars: {
+  NODE_ENV: Env["nodeEnv"];
+  GITHUB_CLIENT: Env["githubClient"];
+  GITHUB_TOKEN?: string;
+}): Env {
+  return parseEnv(vars);
 }
