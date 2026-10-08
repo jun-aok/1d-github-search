@@ -82,7 +82,7 @@ mock/            画面モック（静的 HTML、Tailwind v4 のブラウザ版�
 | 境界 | 入ってくるもの | 変換先 |
 | --- | --- | --- |
 | 検索ページの URL / BFF のクエリ | `URLSearchParams` | `SearchCondition` |
-| 詳細ページのパス / BFF のパス | `{ owner, repo }` | `RepoPath` |
+| 詳細ページのパス / BFF のパス | `{ owner, repo }` | `RepoPath`（ページは `parseEncodedRepoPath`、BFF は `parseRepoPath`） |
 | GitHub の応答（BFF） | JSON（`unknown`） | `SearchResult` / `RepoDetail` / `GitHubError` |
 | BFF の応答（ブラウザ） | JSON（`unknown`） | `SearchResult` / `RepoDetail` / `ApiError` |
 | 環境変数 | `process.env` | `Env` |
@@ -186,7 +186,8 @@ type ErrorResponse = { error: ApiError };   // エラー応答の JSON。成功�
   → 理由: `..` などで GitHub の別の URL を呼ばされるのを防ぐ。一方、名前の形を厳密に再現しようとすると実在するリポジトリを誤って弾くので、URL を壊すものだけを断る
 - GitHub `GET /repos/{owner}/{repo}` を呼び、`RepoDetail` を返す。URL は `RepoPath` から組み立て、各部を `encodeURIComponent` する
 - GitHub が 301 を返しても `fetch` がリダイレクトを追うので 200 になる。`fullName` は移動後の名前。URL（移動前の名前）と表示名が食い違うが、許容する（リダイレクトもしない）
-- Route Handler の `params` は Promise（Next.js 16）。`await` して使う。Client Component のページでは `use(params)` か `useParams()` で受ける（両方確認済み）
+- Route Handler の `params` は Promise（Next.js 16）。`await` して使う。
+- `params` の値の符号化は、ページと Route Handler で違う（Next.js 16.4 の production ビルドで確認）。ページには `/repos/a%20b/x` の `owner` が `a%20b` のまま届き、Route Handler には復号済みで届く。ページは 1 回だけ復号してから確かめる `parseEncodedRepoPath`（不正な `%` は `ParseError`）を使い、Route Handler は `parseRepoPath` をそのまま使う → 理由: 復号せずに確かめると、空白や `/` を含むパスも通って BFF に問い合わせてしまう。逆に復号済みの値をもう一度復号すると、`%` を含む値の意味が変わるページの `page.tsx` は Server Component のまま `await params` し、`{ owner, repo }` を Client Component（`RepoDetailPage`）に props で渡す → 理由: 検索ページの `page.tsx` と書き方が揃い、コンポーネントテストで Next.js のルーターを偽物にせずに済む（Client Component で `use(params)` / `useParams()` を使う方法も動くことは確認済み）
 - `notFound()` は Server Component / Route Handler 用で Client Component からは呼ばない（公式ドキュメント）。詳細ページの 404 は `NotFound` コンポーネントを描画する
 
 ### GitHub へのリクエスト
@@ -268,6 +269,7 @@ type ErrorResponse = { error: ApiError };   // エラー応答の JSON。成功�
   - 検索の `queryFn` は、その `Result` に取得した条件を添えた `{ condition, result }` を返す → 理由: 前の結果を薄く表示している間は URL の条件と表示中の結果の条件が違う。件数・ページ番号・ページ送りの移動先は、表示中の結果の条件から求める
   - 取得中は `placeholderData: keepPreviousData` で前の結果を保持し、薄く表示する。ページ送りでも、別のキーワードの検索でも、同じキーワードの再検索でも同じ扱い → 理由: 薄くなっていれば読み込み中だと分かる。場面ごとに見せ方を変える必要がない
     - 一覧はモックどおり `<ul>` を薄くする。エラー・0 件・範囲外の表示は、取得中だけ `opacity-50` と `aria-busy` を付けた `<div>` で包む（`Faded`）
+    - 詳細ページも同じ扱いにする。前の失敗（エラー・見つからない）を表示したまま取り直す間（もう一度開いた直後・再試行の直後）は `Faded` で包む → 理由: 失敗は覚えないが `data` には残るので、包まないと前回のエラーが現在のものに見える
     - 初期画面（条件なし）を挟んだら、前の結果は無い扱いにしてスケルトンを出す。`keepPreviousData` は「最後にデータを持っていた問い合わせ」のデータを返すので（TanStack Query 5.104 で確認）、条件なしの問い合わせに `initialData: null` を持たせ、前が `null` なら何も残さない `keepPreviousResult` を `placeholderData` に使う
   - 自動の再試行はしない（`retry: false`）。再試行は利用者のボタン操作（`refetch`）→ 理由: `Result` 方式では失敗が例外にならず、TanStack Query の再試行が効かない。レート制限中の自動再試行は逆効果でもある
   - ウィンドウに戻ったとき・通信が戻ったときも自動で取り直さない（`QueryClient` の既定で `refetchOnWindowFocus: false`、`refetchOnReconnect: false`）→ 理由: 失敗は覚えない（`staleTime` 0）ので、既定のままだとタブを行き来するたびにレート制限中の GitHub を叩き直す
@@ -371,7 +373,7 @@ page.tsx
   - tsconfig: `strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、`noFallthroughCasesInSwitch`（確認済み: zod の `.optional()` は `?: T | undefined` と推論される。`z.infer` をそのまま型にすれば問題ないが、手書きの型に `?: T` と書いて代入すると `exactOptionalPropertyTypes` でエラーになるので、手書きするなら `?: T | undefined` と書く）
   - ESLint（typescript-eslint の `strictTypeChecked`）: `consistent-type-assertions`（`assertionStyle: "never"`）、`no-restricted-imports`（zod の import を許可した場所以外で禁止）、`no-explicit-any`、`no-non-null-assertion`、`no-unsafe-*`、`switch-exhaustiveness-check`、`ban-ts-comment`
   - テストコードにも同じ規則を適用する。fixture も `parse` を通して作る
-- オーナーアイコンは `next/image` を使わず、`<img>` でブラウザが GitHub から直接読む。URL の `s` パラメータでサイズを指定し（一覧は 80 = 表示 40px の 2 倍、詳細は 128 = 表示 64px の 2 倍）、`width` / `height` と `loading="lazy"` を指定する。GitHub の URL には既に `?v=4` が付いているので、文字列連結ではなく `URL` オブジェクトの `searchParams.set("s", …)` で付ける（`format.ts` の `avatarUrl(url, size)`） → 理由: アイコンは小さく、サーバーで変換する利点がない。画像の取得・変換を自分のサーバーにさせない
+- オーナーアイコンは `next/image` を使わず、`<img>` でブラウザが GitHub から直接読む。URL の `s` パラメータでサイズを指定し（一覧は 80 = 表示 40px の 2 倍、詳細は 128 = 表示 64px の 2 倍）、`width` / `height` を指定し、一覧のアイコンには `loading="lazy"` も付ける（詳細のアイコンは画面の最上部の 1 枚なので付けない。モックどおり）。GitHub の URL には既に `?v=4` が付いているので、文字列連結ではなく `URL` オブジェクトの `searchParams.set("s", …)` で付ける（`format.ts` の `avatarUrl(url, size)`） → 理由: アイコンは小さく、サーバーで変換する利点がない。画像の取得・変換を自分のサーバーにさせない
   - ESLint の `@next/next/no-img-element` はこの方針と衝突するので無効にする
 - アクセシビリティ: フォームにラベル、一覧は `<ul>`/`<li>`、行は `<a>`、読み込み中は `aria-busy`、エラーは `role="alert"`、アイコンの `alt` は、一覧では空（行のリンク文字列に owner が含まれるため装飾扱い）、詳細では「{owner} のアイコン」
 - Next.js 16 で使わない機能: Cache Components / `use cache`（サーバーでデータを取得しないため）、`proxy`（旧 middleware）
