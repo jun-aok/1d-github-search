@@ -1,0 +1,12 @@
+node_modules
+.next
+package-lock.json
+test-results
+playwright-report
+mock
+docs
+spike
+AGENTS.md
+.claude
+*.md
+src/mocks/fixtures/*.json

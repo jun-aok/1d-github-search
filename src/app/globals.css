@@ -1,0 +1,3 @@
+@import "tailwindcss";
+
+/* ダークモードはスコープ外（docs/requirements.md）。配色はモック（mock/）と同じ Tailwind の既定色を使う */

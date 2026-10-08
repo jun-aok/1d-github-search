@@ -1,0 +1,28 @@
+# CI（docs/requirements.md 制約）。すべて Docker Compose 経由で、ローカルと同じ手順で検査する
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_CLIENT: fake
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: docker compose run --rm --no-deps -T app npm ci
+      - name: Lint
+        run: docker compose run --rm --no-deps -T app npm run lint
+      - name: Typecheck
+        run: docker compose run --rm --no-deps -T app npm run typecheck
+      - name: Unit / component tests
+        run: docker compose run --rm --no-deps -T app npm test
+      - name: E2E (production image + fake GitHub)
+        run: docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e
+      - name: Tear down
+        if: always()
+        run: docker compose --profile e2e down -v
