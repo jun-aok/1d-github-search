@@ -99,4 +99,16 @@ describe("RepoDetailPage", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(requests).toHaveLength(2);
   });
+
+  it("取得できた詳細は覚えておき、もう一度表示するときは取得し直さない", async () => {
+    const queryClient = new QueryClient();
+    const first = renderPage({ owner: "react", repo: "react" }, queryClient);
+    await screen.findByRole("heading", { level: 1, name: "react/react" });
+    first.unmount();
+
+    renderPage({ owner: "react", repo: "react" }, queryClient);
+    expect(screen.getByRole("heading", { level: 1, name: "react/react" })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(requests).toHaveLength(1);
+  });
 });
