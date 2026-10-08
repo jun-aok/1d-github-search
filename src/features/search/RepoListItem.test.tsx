@@ -41,6 +41,11 @@ describe("RepoListItem", () => {
     expect(icon).toHaveAttribute("src", "https://avatars.githubusercontent.com/u/102812?v=4&s=80");
   });
 
+  it("リンク先は owner と name をそれぞれ URL の 1 区切りとして符号化する（詳細の取得と同じ）", () => {
+    render(<RepoListItem repo={repoWith({ fullName: "a b/c#d?e" })} />);
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/repos/a%20b/c%23d%3Fe");
+  });
+
   it("言語が null のときは「—」、description が null のときは空にする", () => {
     render(<RepoListItem repo={repoWith({ language: null, description: null })} />);
     const link = screen.getByRole("link");
