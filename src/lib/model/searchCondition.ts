@@ -4,7 +4,7 @@ import type { ParseError, Result } from "./result";
 import { safeParse } from "./zodResult";
 
 const schema = z.object({
-  query: z.string().trim(),
+  query: z.string().trim().min(1).max(256),
   page: z.number(),
 });
 
