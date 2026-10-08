@@ -16,10 +16,13 @@ export type Pagination = {
   readonly nextPage: number | null;
 };
 
+// 前後のページ番号を持つ（null は移れない）。範囲外のページでは page - 1 も範囲外なので、「前へ」は最終ページへ戻す
 export function pagination(condition: SearchCondition, totalCount: number): Pagination {
-  void condition;
-  void totalCount;
-  return { page: 0, totalPages: -1, prevPage: -1, nextPage: -1 };
+  const last = totalPages(totalCount);
+  const page = condition.page;
+  const prevPage = last === 0 || page === 1 ? null : Math.min(page - 1, last);
+  const nextPage = page < last ? page + 1 : null;
+  return { page, totalPages: last, prevPage, nextPage };
 }
 
 export type ResultRange = { readonly from: number; readonly to: number };
