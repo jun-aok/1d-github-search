@@ -20,4 +20,18 @@ describe("parseSearchCondition", () => {
       expect(parseSearchCondition({ query, page: 1 }).ok).toBe(expected);
     });
   });
+
+  describe("page（1〜50 の整数）", () => {
+    it.each([
+      ["0", 0, false],
+      ["1", 1, true],
+      ["50", 50, true],
+      ["51", 51, false],
+      ["小数", 1.5, false],
+      ["負数", -1, false],
+      ["文字列", "2", false],
+    ])("%s", (_name, page, expected) => {
+      expect(parseSearchCondition({ query: "react", page }).ok).toBe(expected);
+    });
+  });
 });

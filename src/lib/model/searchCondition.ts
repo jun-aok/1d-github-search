@@ -5,7 +5,7 @@ import { safeParse } from "./zodResult";
 
 const schema = z.object({
   query: z.string().trim().min(1).max(256),
-  page: z.number(),
+  page: z.number().int().min(1).max(50),
 });
 
 export type SearchCondition = DeepReadonly<z.infer<typeof schema>>;
