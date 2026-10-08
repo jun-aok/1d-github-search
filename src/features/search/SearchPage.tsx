@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { EmptyMessage } from "@/components/EmptyMessage";
 import { ErrorMessage } from "@/components/ErrorMessage";
 import { ListSkeleton } from "@/components/Skeleton";
@@ -100,22 +100,30 @@ function Settled({
   switch (view.kind) {
     case "rateLimited":
     case "failed":
-      return <ErrorMessage error={view.error} failedTitle="検索に失敗しました" onRetry={onRetry} />;
+      return (
+        <Faded busy={busy}>
+          <ErrorMessage error={view.error} failedTitle="検索に失敗しました" onRetry={onRetry} />
+        </Faded>
+      );
     case "empty":
       return (
-        <EmptyMessage hint="別のキーワードで試してください。">
-          「<span>{view.query}</span>」に一致するリポジトリは見つかりませんでした。
-        </EmptyMessage>
+        <Faded busy={busy}>
+          <EmptyMessage hint="別のキーワードで試してください。">
+            「<span>{view.query}</span>」に一致するリポジトリは見つかりませんでした。
+          </EmptyMessage>
+        </Faded>
       );
     case "outOfRange":
       return (
-        <section className="mt-6">
-          <p className="text-sm text-gray-600" aria-live="polite">
-            {`${formatNumber(view.totalCount)} 件`}
-          </p>
-          <p className="mt-16 text-center text-gray-500">このページには結果がありません。</p>
-          <PaginationNav pagination={view.pagination} onMove={onMove} />
-        </section>
+        <Faded busy={busy}>
+          <section className="mt-6">
+            <p className="text-sm text-gray-600" aria-live="polite">
+              {`${formatNumber(view.totalCount)} 件`}
+            </p>
+            <p className="mt-16 text-center text-gray-500">このページには結果がありません。</p>
+            <PaginationNav pagination={view.pagination} onMove={onMove} />
+          </section>
+        </Faded>
       );
     case "loaded":
       return (
@@ -128,4 +136,15 @@ function Settled({
         </section>
       );
   }
+}
+
+// 一覧以外の前の結果（エラー・0 件・範囲外）を、次の取得中だけ薄くする。
+// 取得中でなければ包まない（モックと同じ DOM にするため。一覧は <ul> 自体を薄くする）
+function Faded({ busy, children }: { readonly busy: boolean; readonly children: ReactNode }) {
+  if (!busy) return children;
+  return (
+    <div className="opacity-50" aria-busy="true">
+      {children}
+    </div>
+  );
 }

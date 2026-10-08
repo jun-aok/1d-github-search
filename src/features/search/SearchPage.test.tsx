@@ -217,4 +217,26 @@ describe("SearchPage", () => {
       expect(scrollTo).toHaveBeenCalledWith(0, 0);
     });
   });
+
+  it("前の結果がエラーでも、次の取得中はそれを薄くして残し、取得できたら結果に替える", async () => {
+    const user = userEvent.setup();
+    renderPage(ok(aSearchCondition("__error__")));
+    await screen.findByRole("alert");
+
+    const hold = holdNextSearch();
+    const searchBox = screen.getByLabelText("リポジトリ名");
+    await user.clear(searchBox);
+    await user.type(searchBox, "react{Enter}");
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "検索" })).toBeDisabled();
+    });
+    const faded = screen.getByRole("alert").parentElement;
+    expect(faded).toHaveClass("opacity-50");
+    expect(faded).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByText("検索しています")).toBeNull();
+
+    hold.release();
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
