@@ -36,4 +36,12 @@ describe("SearchForm", () => {
     expect(onSearch).toHaveBeenNthCalledWith(1, aSearchCondition("react", 1));
     expect(onSearch).toHaveBeenNthCalledWith(2, aSearchCondition("react", 1));
   });
+
+  it("読み込み中は検索ボタンが無効で、Enter を押しても onSearch を呼ばない", async () => {
+    const user = userEvent.setup();
+    const { onSearch } = renderForm({ query: "react", busy: true });
+    expect(searchButton()).toBeDisabled();
+    await user.type(searchBox(), "{Enter}");
+    expect(onSearch).not.toHaveBeenCalled();
+  });
 });

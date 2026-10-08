@@ -12,11 +12,12 @@ export type SearchFormProps = {
 };
 
 // 入力欄と検索ボタン（docs/design.md 5 節）。クラス構成は mock/search.html のまま
-export function SearchForm({ query, onSearch }: SearchFormProps) {
+export function SearchForm({ query, busy, onSearch }: SearchFormProps) {
   const inputId = useId();
   const [draft, setDraft] = useState(query);
   // 下書きを検索条件として解析できるか（空白のみ・256 文字超は不可）。BFF と同じ規則
   const condition = parseSearchCondition({ query: draft, page: 1 });
+  const canSearch = condition.ok && !busy;
 
   return (
     <form
@@ -24,7 +25,8 @@ export function SearchForm({ query, onSearch }: SearchFormProps) {
       role="search"
       onSubmit={(e) => {
         e.preventDefault();
-        if (condition.ok) onSearch(condition.value);
+        // ボタンが無効でも Enter で送信されうるので、ここでも確かめる（二重の検索を防ぐ）
+        if (canSearch) onSearch(condition.value);
       }}
     >
       <label htmlFor={inputId} className="sr-only">
@@ -45,7 +47,7 @@ export function SearchForm({ query, onSearch }: SearchFormProps) {
       />
       <button
         type="submit"
-        disabled={!condition.ok}
+        disabled={!canSearch}
         className="rounded-md bg-blue-600 text-white px-4 py-2 font-medium disabled:bg-gray-300 disabled:text-gray-500"
       >
         検索
