@@ -21,4 +21,16 @@ describe("app/error.tsx（描画時の想定外の例外）", () => {
     await user.click(screen.getByRole("button", { name: "再試行" }));
     expect(retry).toHaveBeenCalledTimes(1);
   });
+
+  it("development では例外のメッセージも出し、production では出さない", () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    const { unmount } = render(<ErrorPage error={new Error("boom")} retry={vi.fn()} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("boom");
+    unmount();
+
+    vi.stubEnv("NODE_ENV", "production");
+    render(<ErrorPage error={new Error("boom")} retry={vi.fn()} />);
+    expect(screen.getByRole("alert")).not.toHaveTextContent("boom");
+  });
 });

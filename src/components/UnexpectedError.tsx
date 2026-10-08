@@ -20,6 +20,11 @@ export function UnexpectedError({
       <div className="rounded-md border border-red-300 bg-red-50 p-4">
         <p className="font-semibold text-red-900">問題が発生しました</p>
         <p className="mt-1 text-sm text-red-800">時間をおいて、もう一度お試しください。</p>
+        {process.env.NODE_ENV === "production" ? null : (
+          <pre className="mt-2 whitespace-pre-wrap break-all text-xs text-red-700">
+            {error.message}
+          </pre>
+        )}
         <button
           className="mt-3 rounded-md border border-red-400 bg-white px-3 py-1.5 text-sm"
           onClick={retry}
