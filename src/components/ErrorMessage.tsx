@@ -55,6 +55,13 @@ export function ErrorMessage({ error, failedTitle, onRetry }: ErrorMessageProps)
             問い合わせ番号: <span>{error.requestId}</span>
           </p>
         )}
+        {/* 開発中はログを見に行かずに原因が分かるよう、詳細を折りたたみで出す。production では出さない */}
+        {error.detail === undefined || process.env.NODE_ENV === "production" ? null : (
+          <details className={tone.note}>
+            <summary>詳細</summary>
+            <pre className="mt-1 whitespace-pre-wrap break-all">{error.detail}</pre>
+          </details>
+        )}
       </div>
     </section>
   );

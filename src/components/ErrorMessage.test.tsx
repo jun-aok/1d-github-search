@@ -1,11 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createClientError } from "@/lib/model/apiError";
 import { anApiError } from "@/test/builders";
 import { ErrorMessage } from "./ErrorMessage";
 
 const requestId = "3f9c2a1e-7b44-4d8e-9a10-5c6e7f8a9b01";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("ErrorMessage", () => {
   it("レート制限は固定の案内と問い合わせ番号を出し、再試行ボタンで onRetry を呼ぶ", async () => {
@@ -50,5 +54,20 @@ describe("ErrorMessage", () => {
     );
     expect(screen.getByRole("alert")).not.toHaveTextContent("問い合わせ番号");
     expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
+  });
+
+  it("development では detail を折りたたみで出し、production では出さない", () => {
+    const error = createClientError("応答の形が想定と違います", "totalCount: Too small");
+    vi.stubEnv("NODE_ENV", "development");
+    const { unmount } = render(
+      <ErrorMessage error={error} failedTitle="検索に失敗しました" onRetry={vi.fn()} />,
+    );
+    expect(screen.getByText("totalCount: Too small")).toBeInTheDocument();
+    expect(screen.getByText("totalCount: Too small").closest("details")).not.toBeNull();
+    unmount();
+
+    vi.stubEnv("NODE_ENV", "production");
+    render(<ErrorMessage error={error} failedTitle="検索に失敗しました" onRetry={vi.fn()} />);
+    expect(screen.queryByText("totalCount: Too small")).toBeNull();
   });
 });
