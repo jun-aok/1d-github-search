@@ -40,4 +40,11 @@ describe("RepoListItem", () => {
     expect(icon).toHaveAttribute("alt", "");
     expect(icon).toHaveAttribute("src", "https://avatars.githubusercontent.com/u/102812?v=4&s=80");
   });
+
+  it("言語が null のときは「—」、description が null のときは空にする", () => {
+    render(<RepoListItem repo={repoWith({ language: null, description: null })} />);
+    const link = screen.getByRole("link");
+    expect(within(link).getByText("—")).toBeInTheDocument();
+    expect(link).not.toHaveTextContent("null");
+  });
 });
