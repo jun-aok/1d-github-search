@@ -1,3 +1,4 @@
+import { aSearchCondition } from "@/test/builders";
 import { parseSearchCondition, searchConditionFromParams, toSearchParams } from "./searchCondition";
 
 describe("parseSearchCondition", () => {
@@ -102,15 +103,15 @@ describe("searchConditionFromParams", () => {
 
 describe("toSearchParams", () => {
   it("page が 2 以上なら q と page を出す", () => {
-    expect(toSearchParams({ query: "react", page: 3 }).toString()).toBe("q=react&page=3");
+    expect(toSearchParams(aSearchCondition("react", 3)).toString()).toBe("q=react&page=3");
   });
 
   it("page が 1 なら page を省略する", () => {
-    expect(toSearchParams({ query: "react", page: 1 }).toString()).toBe("q=react");
+    expect(toSearchParams(aSearchCondition("react", 1)).toString()).toBe("q=react");
   });
 
   it("日本語や空白を含む query は URL エンコードされ、読み戻すと同じ条件になる", () => {
-    const condition = { query: "リアクト hooks&a=b", page: 2 };
+    const condition = aSearchCondition("リアクト hooks&a=b", 2);
     const back = searchConditionFromParams(
       new URLSearchParams(toSearchParams(condition).toString()),
     );

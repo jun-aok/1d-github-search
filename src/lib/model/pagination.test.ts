@@ -1,3 +1,4 @@
+import { aSearchCondition } from "@/test/builders";
 import { MAX_PAGE, MAX_RESULTS, PER_PAGE, pagination, resultRange, totalPages } from "./pagination";
 
 describe("定数", () => {
@@ -24,7 +25,7 @@ describe("totalPages", () => {
 });
 
 describe("pagination", () => {
-  const at = (page: number) => ({ query: "react", page });
+  const at = (page: number) => aSearchCondition("react", page);
 
   it("途中のページは前後どちらにも移れる", () => {
     expect(pagination(at(2), 100)).toEqual({ page: 2, totalPages: 5, prevPage: 1, nextPage: 3 });
@@ -91,10 +92,10 @@ describe("resultRange（件数表示の a〜b）", () => {
     [3, 7, 41, 47],
     [1, 2, 1, 2],
   ])("%i ページ目に %i 件なら %i〜%i 件目", (page, count, from, to) => {
-    expect(resultRange({ query: "react", page }, count)).toEqual({ from, to });
+    expect(resultRange(aSearchCondition("react", page), count)).toEqual({ from, to });
   });
 
   it("範囲外のページ（0 件）では from が to を超える", () => {
-    expect(resultRange({ query: "react", page: 10 }, 0)).toEqual({ from: 181, to: 180 });
+    expect(resultRange(aSearchCondition("react", 10), 0)).toEqual({ from: 181, to: 180 });
   });
 });
