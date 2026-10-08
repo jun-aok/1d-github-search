@@ -1,5 +1,5 @@
 import type { ApiError } from "@/lib/model/apiError";
-import type { Pagination, ResultRange } from "@/lib/model/pagination";
+import { pagination, resultRange, type Pagination, type ResultRange } from "@/lib/model/pagination";
 import type { ParseError, Result } from "@/lib/model/result";
 import type { SearchCondition } from "@/lib/model/searchCondition";
 import type { SearchResult } from "@/lib/model/searchResult";
@@ -40,5 +40,16 @@ export function searchView(input: SearchViewInput): SearchView {
   if (condition === null || !condition.ok) return { kind: "initial" };
   // 条件があって応答がまだ無いのは、最初の取得を待っている間だけ
   if (input.response === undefined) return { kind: "loading" };
-  throw new Error("not implemented");
+  return settledView(input.response);
+}
+
+function settledView({ condition, result }: SearchResponse): SettledView {
+  if (!result.ok) throw new Error("not implemented");
+  const value = result.value;
+  return {
+    kind: "loaded",
+    result: value,
+    pagination: pagination(condition, value.totalCount),
+    range: resultRange(condition, value.items.length),
+  };
 }

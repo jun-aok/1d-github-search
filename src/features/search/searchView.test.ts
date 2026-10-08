@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fail, ok } from "@/lib/model/result";
-import { searchEmptyResult } from "@/mocks/bffHandlers";
+import { searchEmptyResult, searchReactResult } from "@/mocks/bffHandlers";
 import { aSearchCondition } from "@/test/builders";
 import { searchView } from "./searchView";
 
@@ -20,7 +20,27 @@ describe("searchView", () => {
 
   it("取得中で前の結果が無いときは、スケルトン（loading）", () => {
     expect(
-      searchView({ condition: ok(aSearchCondition("react")), response: undefined, isFetching: true }),
+      searchView({
+        condition: ok(aSearchCondition("react")),
+        response: undefined,
+        isFetching: true,
+      }),
     ).toEqual({ kind: "loading" });
+  });
+
+  it("結果があれば一覧（loaded）。ページネーションと件数の範囲は応答の条件から求める", () => {
+    const condition = aSearchCondition("react", 2);
+    expect(
+      searchView({
+        condition: ok(condition),
+        response: { condition, result: ok(searchReactResult) },
+        isFetching: false,
+      }),
+    ).toEqual({
+      kind: "loaded",
+      result: searchReactResult,
+      pagination: { page: 2, totalPages: 50, prevPage: 1, nextPage: 3 },
+      range: { from: 21, to: 40 },
+    });
   });
 });
