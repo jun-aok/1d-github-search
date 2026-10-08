@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorMessage } from "@/components/ErrorMessage";
 import { DetailSkeleton } from "@/components/Skeleton";
 import { parseRepoPath } from "@/lib/model/repoPath";
 import { NotFound } from "./NotFound";
@@ -16,6 +17,16 @@ export function RepoDetailPage({ params }: { readonly params: RepoParams }) {
   // 存在し得ない名前なので、問い合わせずに見つからない扱いにする（BFF と同じ規則。docs/design.md 4 節）
   if (!path.ok) return <NotFound />;
   if (result === undefined) return <DetailSkeleton />;
-  if (!result.ok) return result.error.code === "NOT_FOUND" ? <NotFound /> : null;
+  if (!result.ok) {
+    if (result.error.code === "NOT_FOUND") return <NotFound />;
+    // レート制限の文言は ErrorMessage が検索ページと同じものを出す
+    return (
+      <ErrorMessage
+        error={result.error}
+        failedTitle="リポジトリ情報の取得に失敗しました"
+        onRetry={() => undefined}
+      />
+    );
+  }
   return <RepoDetailView repo={result.value} />;
 }

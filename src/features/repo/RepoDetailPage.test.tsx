@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { bffHandlers } from "@/mocks/bffHandlers";
+import { bffHandlers, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
 import { RepoDetailPage, type RepoParams } from "./RepoDetailPage";
 
 const server = setupServer(...bffHandlers);
@@ -60,5 +60,21 @@ describe("RepoDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("読み込んでいます")).toBeNull();
     expect(requests).toHaveLength(0);
+  });
+
+  it("レート制限なら上限到達の案内・再試行ボタン・問い合わせ番号を出す", async () => {
+    renderPage({ owner: "__rate_limited__", repo: "x" });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("GitHub API の利用回数の上限に達しました");
+    expect(alert).toHaveTextContent(`問い合わせ番号: ${TEST_REQUEST_ID}`);
+    expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
+  });
+
+  it("その他の失敗なら、詳細の取得に失敗した案内・再試行ボタン・問い合わせ番号を出す", async () => {
+    renderPage({ owner: "__error__", repo: "x" });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("リポジトリ情報の取得に失敗しました");
+    expect(alert).toHaveTextContent(`問い合わせ番号: ${TEST_REQUEST_ID}`);
+    expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
   });
 });
