@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { useState } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { ok } from "@/lib/model/result";
 import type { SearchCondition } from "@/lib/model/searchCondition";
 import { bffHandlers } from "@/mocks/bffHandlers";
+import { aSearchCondition } from "@/test/builders";
 import { SearchPage } from "./SearchPage";
 import type { SearchUrl } from "./useSearchUrl";
 
@@ -65,5 +66,21 @@ describe("SearchPage", () => {
     expect(screen.getByLabelText("リポジトリ名")).toHaveValue("");
     expect(screen.queryByRole("list")).toBeNull();
     expect(requests).toHaveLength(0);
+  });
+
+  it("検索条件があれば、スケルトンを出してから一覧・件数・ページネーションを出す", async () => {
+    renderPage(ok(aSearchCondition("react", 2)));
+    expect(screen.getByText("検索しています")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "検索" })).toBeDisabled();
+
+    expect(await screen.findByText("7,297,834 件中 21〜40 件を表示")).toBeInTheDocument();
+    expect(screen.queryByText("検索しています")).toBeNull();
+    expect(within(screen.getByRole("list")).getAllByRole("link")).toHaveLength(20);
+    expect(screen.getByRole("navigation", { name: "ページネーション" })).toHaveTextContent(
+      "2 / 50 ページ",
+    );
+    expect(screen.getByLabelText("リポジトリ名")).toHaveValue("react");
+    expect(screen.getByRole("button", { name: "検索" })).toBeEnabled();
+    expect(requests.map((u) => u.search)).toEqual(["?q=react&page=2"]);
   });
 });
