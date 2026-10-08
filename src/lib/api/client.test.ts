@@ -56,6 +56,18 @@ describe("fetchSearch", () => {
     expect(error.requestId).toBeUndefined();
   });
 
+  it("エラー応答が JSON だが ErrorResponse の形でないときは、問い合わせ番号の無い失敗を返す", async () => {
+    server.use(
+      http.get(`${BFF_ORIGIN}/api/search`, () =>
+        HttpResponse.json({ message: "Internal Server Error" }, { status: 500 }),
+      ),
+    );
+    const error = errorOf(await fetchSearch(aSearchCondition("react")));
+    expect(error.code).toBe("UPSTREAM_ERROR");
+    expect(error.requestId).toBeUndefined();
+    expect(error.detail).toContain("500");
+  });
+
   it("成功応答の形が SearchResult と違うときは、どの項目が違うかを detail に入れた失敗を返す", async () => {
     server.use(
       http.get(`${BFF_ORIGIN}/api/search`, () => HttpResponse.json({ totalCount: -1, items: [] })),
