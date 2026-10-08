@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw";
 import { setupServer } from "msw/node";
@@ -110,5 +110,17 @@ describe("RepoDetailPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "react/react" })).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(requests).toHaveLength(1);
+  });
+
+  it("失敗は覚えておかず、もう一度表示するときは必ず取得し直す", async () => {
+    const queryClient = new QueryClient();
+    const first = renderPage({ owner: "__error__", repo: "x" }, queryClient);
+    await screen.findByRole("alert");
+    first.unmount();
+
+    renderPage({ owner: "__error__", repo: "x" }, queryClient);
+    await waitFor(() => {
+      expect(requests).toHaveLength(2);
+    });
   });
 });
