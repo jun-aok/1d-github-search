@@ -64,6 +64,14 @@ describe("RepoDetailPage", () => {
     expect(requests).toHaveLength(0);
   });
 
+  it("パスの値は符号化されたまま届くので、復号して RepoPath にならない（%20 = 空白）なら問い合わせない", () => {
+    renderPage({ owner: "a%20b", repo: "x" });
+    expect(
+      screen.getByRole("heading", { level: 1, name: "リポジトリが見つかりません" }),
+    ).toBeInTheDocument();
+    expect(requests).toHaveLength(0);
+  });
+
   it("レート制限なら上限到達の案内・再試行ボタン・問い合わせ番号を出す", async () => {
     renderPage({ owner: "__rate_limited__", repo: "x" });
     const alert = await screen.findByRole("alert");
