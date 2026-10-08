@@ -13,6 +13,8 @@ const SUCCESS_STALE_TIME_MS = 60_000;
 export type RepoState = {
   // 取得が終わるまでは undefined
   readonly result: Result<RepoDetail, ApiError> | undefined;
+  // 取得中か。前の結果があっても取り直している間は true（もう一度開いた直後、再試行の直後）
+  readonly isFetching: boolean;
   // 再試行ボタン。同じリポジトリをもう一度取得する
   readonly retry: () => void;
 };
@@ -30,6 +32,7 @@ export function useRepo(path: RepoPath | null): RepoState {
   const { refetch } = query;
   return {
     result: query.data,
+    isFetching: query.isFetching,
     retry: () => {
       void refetch();
     },

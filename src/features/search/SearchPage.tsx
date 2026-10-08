@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import { EmptyMessage } from "@/components/EmptyMessage";
 import { ErrorMessage } from "@/components/ErrorMessage";
+import { Faded } from "@/components/Faded";
 import { ListSkeleton } from "@/components/Skeleton";
 import { formatNumber } from "@/lib/format";
 import { PER_PAGE } from "@/lib/model/pagination";
@@ -138,17 +139,6 @@ function Settled({
         </section>
       );
   }
-}
-
-// 一覧以外の前の結果（エラー・0 件・範囲外）を、次の取得中だけ薄くする。
-// 取得中でなければ包まない（モックと同じ DOM にするため。一覧は <ul> 自体を薄くする）
-function Faded({ busy, children }: { readonly busy: boolean; readonly children: ReactNode }) {
-  if (!busy) return children;
-  return (
-    <div className="opacity-50" aria-busy="true">
-      {children}
-    </div>
-  );
 }
 
 // 実際の URL と結び付けた検索ページ。app/page.tsx が Suspense の中で使う

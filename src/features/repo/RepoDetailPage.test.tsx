@@ -1,10 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http } from "msw";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { BFF_ORIGIN, bffError, bffHandlers, TEST_REQUEST_ID } from "@/mocks/bffHandlers";
+import {
+  BFF_ORIGIN,
+  bffError,
+  bffHandlers,
+  repoReactReactDetail,
+  TEST_REQUEST_ID,
+} from "@/mocks/bffHandlers";
 import { RepoDetailPage, type RepoParams } from "./RepoDetailPage";
 
 const server = setupServer(...bffHandlers);
@@ -23,6 +29,26 @@ afterEach(() => {
 afterAll(() => {
   server.close();
 });
+
+// 次の詳細の要求を、release を呼ぶまで返さない。取り直しの間の表示を確かめるため
+function holdNextRepo(respond: () => Response) {
+  const gate = Promise.withResolvers<undefined>();
+  server.use(
+    http.get(
+      `${BFF_ORIGIN}/api/repos/:owner/:repo`,
+      async () => {
+        await gate.promise;
+        return respond();
+      },
+      { once: true },
+    ),
+  );
+  return {
+    release: () => {
+      gate.resolve(undefined);
+    },
+  };
+}
 
 function renderPage(params: RepoParams, queryClient = new QueryClient()) {
   return render(
@@ -129,6 +155,68 @@ describe("RepoDetailPage", () => {
     renderPage({ owner: "__error__", repo: "x" }, queryClient);
     await waitFor(() => {
       expect(requests).toHaveLength(2);
+    });
+  });
+
+  describe("取り直しの間は、前の失敗の表示を薄くして残す（検索ページと同じ）", () => {
+    it("再試行ボタンを押した直後", async () => {
+      const user = userEvent.setup();
+      renderPage({ owner: "__error__", repo: "x" });
+      await screen.findByRole("alert");
+
+      const hold = holdNextRepo(() => HttpResponse.json(repoReactReactDetail));
+      await user.click(screen.getByRole("button", { name: "再試行" }));
+      await waitFor(() => {
+        expect(screen.getByRole("alert").parentElement).toHaveAttribute("aria-busy", "true");
+      });
+      expect(screen.getByRole("alert").parentElement).toHaveClass("opacity-50");
+      expect(screen.queryByText("読み込んでいます")).toBeNull();
+
+      hold.release();
+      expect(
+        await screen.findByRole("heading", { level: 1, name: "react/react" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(document.querySelector("[aria-busy]")).toBeNull();
+    });
+
+    it("失敗したリポジトリをもう一度開いた直後", async () => {
+      const queryClient = new QueryClient();
+      const first = renderPage({ owner: "__error__", repo: "x" }, queryClient);
+      await screen.findByRole("alert");
+      first.unmount();
+
+      const hold = holdNextRepo(() => bffError("UPSTREAM_ERROR", 502));
+      renderPage({ owner: "__error__", repo: "x" }, queryClient);
+      const faded = screen.getByRole("alert").parentElement;
+      expect(faded).toHaveClass("opacity-50");
+      expect(faded).toHaveAttribute("aria-busy", "true");
+
+      hold.release();
+      await waitFor(() => {
+        expect(screen.getByRole("alert").parentElement).not.toHaveAttribute("aria-busy");
+      });
+      expect(requests).toHaveLength(2);
+    });
+
+    it("見つからなかったリポジトリをもう一度開いた直後", async () => {
+      const queryClient = new QueryClient();
+      const notFound = { level: 1, name: "リポジトリが見つかりません" } as const;
+      const first = renderPage({ owner: "__not_found__", repo: "x" }, queryClient);
+      await screen.findByRole("heading", notFound);
+      first.unmount();
+
+      const hold = holdNextRepo(() => bffError("NOT_FOUND", 404));
+      renderPage({ owner: "__not_found__", repo: "x" }, queryClient);
+      const faded = screen.getByRole("heading", notFound).closest("section")?.parentElement;
+      expect(faded).toHaveClass("opacity-50");
+      expect(faded).toHaveAttribute("aria-busy", "true");
+
+      hold.release();
+      await waitFor(() => {
+        expect(document.querySelector("[aria-busy]")).toBeNull();
+      });
+      expect(screen.getByRole("heading", notFound)).toBeInTheDocument();
     });
   });
 });
