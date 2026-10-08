@@ -61,7 +61,15 @@ export function createHttpGitHubClient(options: HttpGitHubClientOptions = {}): G
     };
     if (token !== undefined) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+    const signal = AbortSignal.timeout(timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(url, { headers, signal });
+    } catch (e) {
+      // 時間切れで中断されたのか、そもそも繋がらなかったのかを signal で見分ける
+      const detail = e instanceof Error ? e.message : String(e);
+      return fail({ kind: "upstream", reason: signal.aborted ? "timeout" : "network", detail });
+    }
     if (!res.ok) return fail(await errorFromResponse(res, nowMs()));
     const body = await readJson(res);
     if (!body.ok)

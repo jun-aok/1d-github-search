@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { GITHUB_API, githubHandlers } from "@/mocks/githubHandlers";
@@ -218,6 +218,54 @@ describe("HttpGitHubClient: レート制限", () => {
 
     expect(await createHttpGitHubClient({ nowMs }).search(search)).toMatchObject({
       error: { kind: "rate_limited", retryAfter: 60 },
+    });
+  });
+});
+
+describe("HttpGitHubClient: 繋がらない・遅い・形が違う", () => {
+  const search = aSearchCondition("react");
+
+  it("接続できなければ upstream / network", async () => {
+    server.use(http.get(`${GITHUB_API}/search/repositories`, () => HttpResponse.error()));
+
+    expect(await createHttpGitHubClient().search(search)).toMatchObject({
+      ok: false,
+      error: { kind: "upstream", reason: "network" },
+    });
+  });
+
+  it("時間内に返らなければ upstream / timeout", async () => {
+    server.use(
+      http.get(`${GITHUB_API}/search/repositories`, async () => {
+        await delay("infinite");
+        return HttpResponse.json({});
+      }),
+    );
+
+    expect(await createHttpGitHubClient({ timeoutMs: 50 }).search(search)).toMatchObject({
+      ok: false,
+      error: { kind: "upstream", reason: "timeout" },
+    });
+  });
+
+  it("200 でも形が想定と違えば upstream / contract で、食い違う項目名を detail に残す", async () => {
+    server.use(
+      http.get(`${GITHUB_API}/search/repositories`, () => HttpResponse.json({ items: [] })),
+    );
+
+    const error = errorOf(await createHttpGitHubClient().search(search));
+    expect(error).toMatchObject({ kind: "upstream", reason: "contract" });
+    expect("detail" in error && error.detail).toContain("total_count");
+  });
+
+  it("200 でも本文が JSON でなければ upstream / contract", async () => {
+    server.use(
+      http.get(`${GITHUB_API}/repos/:owner/:repo`, () => new HttpResponse("<html>oops</html>")),
+    );
+
+    expect(await createHttpGitHubClient().getRepo(aRepoPath("react", "react"))).toMatchObject({
+      ok: false,
+      error: { kind: "upstream", reason: "contract" },
     });
   });
 });
