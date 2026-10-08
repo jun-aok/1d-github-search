@@ -239,4 +239,28 @@ describe("SearchPage", () => {
     await screen.findByText("7,297,834 件中 1〜20 件を表示");
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  it("URL が前の条件に戻ったとき（ブラウザバック）、成功した結果は覚えていて取り直さず、失敗した結果は取り直す", async () => {
+    const queryClient = new QueryClient();
+    const at = (condition: SearchCondition) => (
+      <QueryClientProvider client={queryClient}>
+        <SearchPage url={{ condition: ok(condition), navigate: vi.fn() }} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(at(aSearchCondition("__error__")));
+    await screen.findByRole("alert");
+    rerender(at(aSearchCondition("react")));
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    expect(requests).toHaveLength(2);
+
+    rerender(at(aSearchCondition("__error__")));
+    await waitFor(() => {
+      expect(requests).toHaveLength(3);
+    });
+    await screen.findByRole("alert");
+
+    rerender(at(aSearchCondition("react")));
+    await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    expect(requests).toHaveLength(3);
+  });
 });
