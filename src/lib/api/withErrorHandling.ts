@@ -75,7 +75,12 @@ function logFailure(logger: Logger, error: AppError, fields: LogFields): void {
   }
 }
 
-function requestFields(req: NextRequest, requestId: string): LogFields {
+// 失敗の記録と想定外の例外の記録で同じ項目を残す（docs/design.md 8 節）
+function requestFields(
+  req: NextRequest,
+  requestId: string,
+  startedAt: number,
+): { requestId: string; route: string } & LogFields {
   const params = req.nextUrl.searchParams;
   const q = params.get("q");
   const page = params.get("page");
@@ -84,6 +89,7 @@ function requestFields(req: NextRequest, requestId: string): LogFields {
     route: req.nextUrl.pathname,
     ...(q === null ? {} : { q: q.slice(0, 256) }),
     ...(page === null ? {} : { page: page.slice(0, 16) }),
+    durationMs: Math.round(performance.now() - startedAt),
   };
 }
 
@@ -98,11 +104,10 @@ export function withErrorHandling(handler: Handler, deps: Deps = defaultDeps) {
       if (result.ok) {
         return Response.json(result.value, { headers: { "x-request-id": requestId } });
       }
-      const durationMs = Math.round(performance.now() - startedAt);
-      logFailure(deps.logger, result.error, { ...requestFields(req, requestId), durationMs });
+      logFailure(deps.logger, result.error, requestFields(req, requestId, startedAt));
       return respond(result.error, requestId, deps.env);
     } catch (e) {
-      deps.reporter.report(e, { requestId, route: req.nextUrl.pathname });
+      deps.reporter.report(e, requestFields(req, requestId, startedAt));
       const detail = e instanceof Error ? (e.stack ?? String(e)) : String(e);
       return respond({ kind: "internal", detail }, requestId, deps.env);
     }

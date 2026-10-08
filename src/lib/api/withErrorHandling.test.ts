@@ -180,4 +180,14 @@ describe("withErrorHandling: 想定外の例外", () => {
     expect(reporter.reports[0]?.error).toBeInstanceOf(Error);
     expect(logger.entries).toEqual([]);
   });
+
+  it("reporter にも、失敗の記録と同じく検索条件と所要時間を渡す", async () => {
+    const { reporter, deps } = setup();
+
+    await call(boom, deps);
+
+    const context = reporter.reports[0]?.context;
+    expect(context).toMatchObject({ q: "react", page: "2" });
+    expect(typeof context?.["durationMs"]).toBe("number");
+  });
 });
