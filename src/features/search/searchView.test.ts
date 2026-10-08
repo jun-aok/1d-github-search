@@ -85,4 +85,24 @@ describe("searchView", () => {
     expect(viewOf(upstream)).toEqual({ kind: "failed", error: upstream });
     expect(viewOf(internal)).toEqual({ kind: "failed", error: internal });
   });
+
+  it("取得中で前の結果があれば、前の結果（エラーや 0 件でも）を refreshing として残す", () => {
+    const previous = aSearchCondition("__empty__");
+    expect(
+      searchView({
+        condition: ok(aSearchCondition("react", 2)),
+        response: { condition: previous, result: ok(searchEmptyResult) },
+        isFetching: true,
+      }),
+    ).toEqual({ kind: "refreshing", previous: { kind: "empty", query: "__empty__" } });
+
+    const error = anApiError("UPSTREAM_ERROR");
+    expect(
+      searchView({
+        condition: ok(previous),
+        response: { condition: previous, result: fail(error) },
+        isFetching: true,
+      }),
+    ).toEqual({ kind: "refreshing", previous: { kind: "failed", error } });
+  });
 });

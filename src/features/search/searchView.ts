@@ -40,7 +40,9 @@ export function searchView(input: SearchViewInput): SearchView {
   if (condition === null || !condition.ok) return { kind: "initial" };
   // 条件があって応答がまだ無いのは、最初の取得を待っている間だけ
   if (input.response === undefined) return { kind: "loading" };
-  return settledView(input.response);
+  const settled = settledView(input.response);
+  // 取得中は前の結果を残して薄く表示する。ページ送り・別キーワード・同じキーワードの再検索で区別しない
+  return input.isFetching ? { kind: "refreshing", previous: settled } : settled;
 }
 
 function settledView({ condition, result }: SearchResponse): SettledView {
