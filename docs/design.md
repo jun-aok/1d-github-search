@@ -166,6 +166,7 @@ type ApiError = {
   code: "BAD_REQUEST" | "NOT_FOUND" | "RATE_LIMITED" | "UPSTREAM_ERROR" | "INTERNAL_ERROR";
   message: string;           // 開発者向けの短い説明。画面は code で分岐し、message は表示しない
   requestId?: string;        // ログと突き合わせる ID。BFF に届かなかったエラー（ネットワーク断）には無い
+                             // ブラウザ側の失敗（BFF に届かない・JSON でない・形が違う）は createClientError で UPSTREAM_ERROR・requestId なしにする
   detail?: string;           // development のみ。元の例外のメッセージ・スタック、GitHub の応答本文
   retryAfter?: number;       // RATE_LIMITED のとき。秒
 };
@@ -264,9 +265,13 @@ type ErrorResponse = { error: ApiError };   // エラー応答の JSON。成功�
 - サーバーから取った値は TanStack Query で管理 → 理由: キャッシュ、前の結果の保持、取得中の状態を自前で書かずに済む
   - キー: `["search", q, page]`、`["repo", owner, repo]`
   - `queryFn` は例外を投げず `Result<SearchResult, ApiError>` を返す（ネットワーク断や解析失敗も `ApiError` に変換する）→ 理由: TanStack Query の `error` は型が保証されないため、想定内のエラーは `data` 側で型付きで扱う
+  - 検索の `queryFn` は、その `Result` に取得した条件を添えた `{ condition, result }` を返す → 理由: 前の結果を薄く表示している間は URL の条件と表示中の結果の条件が違う。件数・ページ番号・ページ送りの移動先は、表示中の結果の条件から求める
   - 取得中は `placeholderData: keepPreviousData` で前の結果を保持し、薄く表示する。ページ送りでも、別のキーワードの検索でも、同じキーワードの再検索でも同じ扱い → 理由: 薄くなっていれば読み込み中だと分かる。場面ごとに見せ方を変える必要がない
+    - 一覧はモックどおり `<ul>` を薄くする。エラー・0 件・範囲外の表示は、取得中だけ `opacity-50` と `aria-busy` を付けた `<div>` で包む（`Faded`）
+    - 初期画面（条件なし）を挟んだら、前の結果は無い扱いにしてスケルトンを出す。`keepPreviousData` は「最後にデータを持っていた問い合わせ」のデータを返すので（TanStack Query 5.104 で確認）、条件なしの問い合わせに `initialData: null` を持たせ、前が `null` なら何も残さない `keepPreviousResult` を `placeholderData` に使う
   - 自動の再試行はしない（`retry: false`）。再試行は利用者のボタン操作（`refetch`）→ 理由: `Result` 方式では失敗が例外にならず、TanStack Query の再試行が効かない。レート制限中の自動再試行は逆効果でもある
-  - 一覧 → 詳細 → 戻る でキャッシュが効き、再取得しない。覚えるのは成功した結果だけ（60 秒）。失敗（`ok: false`）は覚えず、同じ条件を次に表示するとき必ず取り直す → 理由: `Result` 方式では失敗も `data` に入るため、区別しないとエラー画面が 60 秒残る（`staleTime` を結果に応じて変える書き方は実装時に確認）
+  - ウィンドウに戻ったとき・通信が戻ったときも自動で取り直さない（`QueryClient` の既定で `refetchOnWindowFocus: false`、`refetchOnReconnect: false`）→ 理由: 失敗は覚えない（`staleTime` 0）ので、既定のままだとタブを行き来するたびにレート制限中の GitHub を叩き直す
+  - 一覧 → 詳細 → 戻る でキャッシュが効き、再取得しない。覚えるのは成功した結果だけ（60 秒）。失敗（`ok: false`）は覚えず、同じ条件を次に表示するとき必ず取り直す → 理由: `Result` 方式では失敗も `data` に入るため、区別しないとエラー画面が 60 秒残る（`staleTime` に結果を受け取る関数を渡す。TanStack Query v5.104 で確認済み）
   - 検索ボタンを押したら、URL が変わらなくても（同じキーワードでも）必ず取り直す → 理由: 押したのに反応がない状態を作らない。エラー表示からの復帰にもなる
 - `useSearchParams` を使うコンポーネントは `<Suspense>` で包む（Next.js の要件）
 - 検索ページ内の URL の書き換えは `router.push` ではなく `window.history.pushState` で行う → 理由: `router.push` は Next.js のサーバーにページ情報を取りに行くことがあり、ブラウザだけで描画するこの構成では不要な通信になる。`useSearchParams` は `pushState` / `replaceState` / ブラウザバック・フォワードの変更を検知する（Next.js 16.4 で確認済み。公式ドキュメント「Native History API」にも明記）
@@ -506,6 +511,6 @@ function withErrorHandling(handler: (req: NextRequest, ctx: RouteContext, deps: 
 ### ブラウザ側の流れ
 
 - BFF のエラー応答は `lib/api/client.ts` が `ApiError` に変換し、`Result` の失敗側として返す。画面は `code` で分岐する（5 節の表）
-- 描画時の想定外の例外は `app/error.tsx`（ルート単位）と `app/global-error.tsx`（レイアウト含む）で受け、「問題が発生しました」と再試行ボタン（`reset()`）を出す。development では例外のメッセージも表示する
+- 描画時の想定外の例外は `app/error.tsx`（ルート単位）と `app/global-error.tsx`（レイアウト含む）で受け、「問題が発生しました」と再試行ボタン（`retry()`）を出す（Next.js 16.3 以降は `reset()` より `retry()` が推奨。同梱ドキュメント `error.md`）。development では例外のメッセージも表示する
 - 存在しない URL は `app/not-found.tsx`
 - ブラウザ側のエラー記録は `console.error` のみ。BFF 経由でサーバーに送る仕組みはスコープ外 → 理由: 無認証の受け口を増やすリスクに見合わない
