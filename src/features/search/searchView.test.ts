@@ -17,4 +17,10 @@ describe("searchView", () => {
       }),
     ).toEqual({ kind: "initial" });
   });
+
+  it("取得中で前の結果が無いときは、スケルトン（loading）", () => {
+    expect(
+      searchView({ condition: ok(aSearchCondition("react")), response: undefined, isFetching: true }),
+    ).toEqual({ kind: "loading" });
+  });
 });

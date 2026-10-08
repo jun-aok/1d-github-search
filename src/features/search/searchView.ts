@@ -38,5 +38,7 @@ export type SearchViewInput = {
 export function searchView(input: SearchViewInput): SearchView {
   const { condition } = input;
   if (condition === null || !condition.ok) return { kind: "initial" };
+  // 条件があって応答がまだ無いのは、最初の取得を待っている間だけ
+  if (input.response === undefined) return { kind: "loading" };
   throw new Error("not implemented");
 }
