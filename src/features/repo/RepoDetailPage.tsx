@@ -13,6 +13,8 @@ export type RepoParams = { readonly owner: string; readonly repo: string };
 export function RepoDetailPage({ params }: { readonly params: RepoParams }) {
   const path = parseRepoPath(params);
   const { result } = useRepo(path.ok ? path.value : null);
+  // 存在し得ない名前なので、問い合わせずに見つからない扱いにする（BFF と同じ規則。docs/design.md 4 節）
+  if (!path.ok) return <NotFound />;
   if (result === undefined) return <DetailSkeleton />;
   if (!result.ok) return result.error.code === "NOT_FOUND" ? <NotFound /> : null;
   return <RepoDetailView repo={result.value} />;

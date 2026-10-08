@@ -52,4 +52,13 @@ describe("RepoDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "検索ページへ戻る" })).toHaveAttribute("href", "/");
   });
+
+  it("パスが RepoPath にならない（.. など）ときは、BFF に問い合わせず見つからない案内を出す", () => {
+    renderPage({ owner: "..", repo: "x" });
+    expect(
+      screen.getByRole("heading", { level: 1, name: "リポジトリが見つかりません" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("読み込んでいます")).toBeNull();
+    expect(requests).toHaveLength(0);
+  });
 });
