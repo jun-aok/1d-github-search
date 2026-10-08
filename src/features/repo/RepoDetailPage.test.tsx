@@ -41,4 +41,15 @@ describe("RepoDetailPage", () => {
     expect(screen.queryByText("読み込んでいます")).toBeNull();
     expect(requests.map((u) => u.pathname)).toEqual(["/api/repos/react/react"]);
   });
+
+  it("BFF が NOT_FOUND を返したら、見つからない案内と検索ページへのリンクを出す", async () => {
+    renderPage({ owner: "__not_found__", repo: "x" });
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "リポジトリが見つかりません" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("削除されたか、名前が変更された可能性があります。"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "検索ページへ戻る" })).toHaveAttribute("href", "/");
+  });
 });
