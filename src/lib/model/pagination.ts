@@ -11,6 +11,11 @@ export function totalPages(totalCount: number): number {
   return Math.ceil(Math.min(totalCount, MAX_RESULTS) / PER_PAGE);
 }
 
+// 上限の 1,000 件を超えているか。超えると先頭 1,000 件しか表示できないので、画面に注意書きを出す
+export function exceedsMaxResults(totalCount: number): boolean {
+  return totalCount > MAX_RESULTS;
+}
+
 export type Pagination = {
   readonly page: number;
   readonly totalPages: number;
