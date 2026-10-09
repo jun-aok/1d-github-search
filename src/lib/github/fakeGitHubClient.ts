@@ -15,6 +15,7 @@ const outage: GitHubError = {
   detail: "FakeGitHubClient: 障害を再現しています",
 };
 
+// GitHub の形の fixture を、本物の実装と同じ parse を通して SearchResult にする
 function fromFixture(input: unknown): Result<SearchResult, GitHubError> {
   const r = parseGitHubSearch(input);
   return r.ok ? r : fail(contractViolation(r.error));

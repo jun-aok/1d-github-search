@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-// リポジトリが見つからない（BFF が NOT_FOUND、またはパスが RepoPath にならない）。クラス構成は mock/detail.html のまま
+// リポジトリが見つからない案内を出す（BFF が NOT_FOUND、またはパスが RepoPath にならない）。
+// クラス構成は mock/detail.html のまま
 export function NotFound() {
   return (
     <section className="mt-10 text-center">

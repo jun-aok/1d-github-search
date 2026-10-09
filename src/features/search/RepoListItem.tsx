@@ -5,7 +5,8 @@ import type { RepoSummary } from "@/lib/model/repo";
 // 一覧の 1 行。行全体を詳細ページへのリンクにする。クラス構成は mock/search.html のまま
 // prefetch={false}: 画面に入った 20 行分の遷移先を先読みしない（docs/design.md 5 節）
 export function RepoListItem({ repo }: { readonly repo: RepoSummary }) {
-  // fullName は "owner/name"。各部を URL の 1 区切りとして符号化する（lib/api/client.ts の fetchRepo と同じ）
+  // fullName は "owner/name"。各部を URL の 1 区切りとして符号化する
+  // （lib/api/client.ts の fetchRepo と同じ）
   const href = `/repos/${repo.fullName
     .split("/")
     .map((part) => encodeURIComponent(part))

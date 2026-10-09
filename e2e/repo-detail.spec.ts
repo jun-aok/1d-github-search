@@ -44,13 +44,15 @@ test.describe("詳細ページ: 表示", () => {
       "Fork 数",
       "Issue 数",
     ]);
-    // Watcher 数は subscribers_count（stargazers_count や watchers_count ではない）、Issue 数は open_issues_count
+    // Watcher 数は subscribers_count（stargazers_count や watchers_count ではない）。
+    // Issue 数は open_issues_count
     await expect(page.getByRole("definition")).toHaveText([
       formatNumber(repoReactReact.stargazers_count),
       formatNumber(repoReactReact.subscribers_count),
       formatNumber(repoReactReact.forks_count),
       formatNumber(repoReactReact.open_issues_count),
     ]);
+    // formatNumber は実装と同じ Intl.NumberFormat なので、カンマ区切りは固定の文字列でも確かめる
     await expect(page.getByRole("definition").first()).toHaveText("250,916");
   });
 

@@ -3,7 +3,8 @@
 import { UnexpectedError } from "@/components/UnexpectedError";
 import "./globals.css";
 
-// レイアウトを含む描画時の想定外の例外（docs/design.md 8 節）。layout.tsx の代わりに html / body を出す
+// レイアウトを含む描画時の想定外の例外を受ける（docs/design.md 8 節）。
+// layout.tsx ごと置き換わるので、html / body を自分で出す
 export default function GlobalError({
   error,
   retry,

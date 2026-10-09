@@ -11,7 +11,8 @@ import {
   summaryText,
 } from "./support/pages";
 
-// 一覧の行と件数表示。表示データは FakeGitHubClient と同じ fixture（src/mocks/fixtures/search-react.json）
+// 一覧の行と件数表示。
+// 表示データは FakeGitHubClient と同じ fixture（src/mocks/fixtures/search-react.json）
 
 test.describe("検索ページ: 一覧", () => {
   test("20 件を <ul>/<li> の行として表示する", async ({ page }) => {

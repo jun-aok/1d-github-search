@@ -9,8 +9,9 @@ export const metadata: Metadata = {
   description: "GitHub のリポジトリを検索する",
 };
 
-// Server Component のまま（データ取得はしない）。html / body とヘッダーを出す（docs/design.md 1・2 節）。
-// ヘッダーのタイトルは検索ページ（/）へのリンク。クラス構成は mock/ のまま
+// html / body とヘッダーを出す（docs/design.md 1・2 節）。
+// Server Component のまま（データ取得はしない）。ヘッダーのタイトルは検索ページ（/）へのリンク。
+// クラス構成は mock/ のまま
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">

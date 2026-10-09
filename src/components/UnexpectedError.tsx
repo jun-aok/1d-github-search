@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 
 // 描画時の想定外の例外（docs/design.md 8 節）。app/error.tsx と app/global-error.tsx が使う。
-// 記録はブラウザの console.error だけ。development では例外のメッセージも出す
+// 記録はブラウザの console.error だけ（サーバーへ送る受け口は作らない）。
+// development では例外のメッセージも出す
 export function UnexpectedError({
   error,
   retry,

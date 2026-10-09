@@ -8,7 +8,8 @@ import searchFew from "./fixtures/search-few.json";
 import searchReact from "./fixtures/search-react.json";
 
 // BFF の形で応答する MSW のハンドラ。コンポーネントテストが使う（docs/design.md 7 節）。
-// 切り替えのキーワードは FakeGitHubClient と同じ（検索は __empty__ / __few__ / __rate_limited__ / __error__、詳細は owner の __not_found__ / __rate_limited__ / __error__）
+// 切り替えのキーワードは FakeGitHubClient と同じ。検索は q の __empty__ / __few__ /
+// __rate_limited__ / __error__、詳細は owner の __not_found__ / __rate_limited__ / __error__
 
 // jsdom の window.location.origin（vitest.config.ts の environmentOptions）
 export const BFF_ORIGIN = "http://localhost:3000";
@@ -49,6 +50,7 @@ export const bffHandlers = [
     switch (params.get("q") ?? "") {
       case "__empty__":
         return HttpResponse.json(searchEmptyResult);
+      // 2 件なので 1 ページに収まる。2 ページ目以降は範囲外（件数はあるが items が空）
       case "__few__":
         return HttpResponse.json(
           (params.get("page") ?? "1") === "1" ? searchFewResult : searchOutOfRangeResult,

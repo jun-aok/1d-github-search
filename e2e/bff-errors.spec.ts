@@ -1,6 +1,7 @@
 import { expect, test } from "./support/test";
 
-// BFF のエラー応答（docs/design.md 4・8 節）。production ビルドなので、詳細（detail）やスタックを含まない
+// BFF のエラー応答（docs/design.md 4・8 節）。
+// production ビルドなので、詳細（detail）やスタックを含まない
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -24,6 +25,7 @@ test.describe("BFF: エラー応答", () => {
       const body: unknown = await response.json();
       expect(body).toMatchObject({ error: { code, requestId: expect.stringMatching(uuid) } });
       expect(body).not.toHaveProperty("error.detail");
+      // スタックトレースの行（at fn (file:line:col)）が本文のどこにも無い
       expect(JSON.stringify(body)).not.toMatch(/\bat\s.+\(.+:\d+:\d+\)/);
       expect(body).toMatchObject({ error: { requestId: response.headers()["x-request-id"] } });
     });

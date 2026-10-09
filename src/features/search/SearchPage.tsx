@@ -27,7 +27,8 @@ export function SearchPage({ url }: { readonly url: SearchUrl }) {
   const view = searchView({ condition, response, isFetching });
   const busy = view.kind === "loading" || view.kind === "refreshing";
 
-  // ページを移ったら、新しいページの結果が表示されたところでページの先頭へスクロールする（docs/design.md 5 節）
+  // ページを移ったら、新しいページの結果が表示されたところでページの先頭へスクロールする
+  // （docs/design.md 5 節）
   const scrollOnShow = useRef(false);
   useEffect(() => {
     if (!scrollOnShow.current || isFetching) return;
@@ -88,7 +89,8 @@ function SearchBody({ view, ...handlers }: { readonly view: SearchView } & BodyP
       return <ListSkeleton label="検索しています" rows={PER_PAGE} />;
     case "refreshing":
       return <Settled view={view.previous} busy {...handlers} />;
-    // 取得が終わった状態。default にせず種類を書き並べ、状態を足したときに網羅チェックで気づけるようにする
+    // 取得が終わった状態。default にせず種類を書き並べ、
+    // 状態を足したときに網羅チェックで気づけるようにする
     case "rateLimited":
     case "failed":
     case "empty":

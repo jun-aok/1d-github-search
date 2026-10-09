@@ -37,8 +37,10 @@ const searchShape = z
 
 const repoShape = summaryShape
   .extend({
+    // Watcher 数は subscribers_count（docs/requirements.md「詳細ページ」）。watchers_count は star 数
     subscribers_count: z.number(),
     forks_count: z.number(),
+    // open_issues_count は PR を含む数（docs/design.md 4 節）
     open_issues_count: z.number(),
   })
   .transform((r) => ({

@@ -25,7 +25,7 @@ function errorOf(result: Result<unknown, GitHubError>): GitHubError {
   return result.error;
 }
 
-// 受け取ったリクエストを記録する
+// path への GET に response で応答させ、受け取ったリクエストを返り値の配列に記録する
 function captureRequests(path: string, response: () => Response): Request[] {
   const requests: Request[] = [];
   server.use(

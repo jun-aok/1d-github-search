@@ -6,7 +6,8 @@ export type PaginationNavProps = {
 };
 
 // 前へ・次へと「現在 / 総ページ数」。移れない側のボタンは無効（docs/design.md 5 節）。
-// クラス構成は mock/search.html のまま（button に type を付けないのもモックに合わせている。form の外なので送信はしない）
+// クラス構成は mock/search.html のまま。button に type を付けないのもモックに合わせている
+// （form の外なので送信はしない）
 export function PaginationNav({ pagination, onMove }: PaginationNavProps) {
   return (
     <nav aria-label="ページネーション" className="mt-6 flex items-center justify-between text-sm">

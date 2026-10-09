@@ -3,7 +3,8 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Providers } from "./providers";
 
-// 取得のたびに回数を数え、表示する。staleTime 0（失敗した検索と同じ。docs/design.md 5 節）なので、既定ならフォーカス・再接続で取り直す
+// 取得のたびに回数を数え、表示する。staleTime 0（失敗した検索と同じ。docs/design.md 5 節）なので、
+// 既定ならフォーカス・再接続で取り直す
 function CountingQuery({ fetchCount }: { readonly fetchCount: () => Promise<number> }) {
   const query = useQuery({ queryKey: ["counting"], queryFn: fetchCount, staleTime: 0 });
   return <p>{query.data === undefined ? "取得中" : `取得 ${String(query.data)} 回`}</p>;

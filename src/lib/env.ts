@@ -30,6 +30,7 @@ export type Env = Readonly<{
 export function parseEnv(
   source: Readonly<Record<string, string | undefined>>,
 ): Result<Env, ParseError> {
+  // 空文字は未設定として扱う。compose.yaml・Dockerfile・.env.example は未設定でも空文字を渡すため
   const r = safeParse(schema, {
     NODE_ENV: source.NODE_ENV === "" ? undefined : source.NODE_ENV,
     GITHUB_CLIENT: source.GITHUB_CLIENT === "" ? undefined : source.GITHUB_CLIENT,

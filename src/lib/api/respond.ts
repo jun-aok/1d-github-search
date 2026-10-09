@@ -5,7 +5,8 @@ import type { AppError } from "./appError";
 type Code = ApiError["code"];
 
 // AppError → ステータスと ApiError の変換表（docs/design.md 4 節）。
-// message は開発者向けの短い説明（画面は code で分岐し、message は表示しない）。種類を足すと switch が網羅でなくなりコンパイルエラーになる
+// message は開発者向けの短い説明（画面は code で分岐し、message は表示しない）。
+// 種類を足すと switch が網羅でなくなりコンパイルエラーになる
 function describe(error: AppError): { status: number; code: Code; message: string } {
   switch (error.kind) {
     case "bad_request":
@@ -35,7 +36,8 @@ function detailOf(error: AppError): string | undefined {
   }
 }
 
-// detail を含めるのは development（と test）のときだけ。production では応答にもスタックや GitHub の本文を出さない
+// AppError を HTTP 応答にする。detail を含めるのは development（と test）のときだけ。
+// production では応答にスタックや GitHub の本文を出さない
 export function respond(error: AppError, requestId: string, env: Env): Response {
   const { status, code, message } = describe(error);
   const detail = env.nodeEnv === "production" ? undefined : detailOf(error);

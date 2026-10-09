@@ -5,7 +5,8 @@ import { pathToFileURL } from "node:url";
 // モック（mock/*.html）と実装の DOM 比較（docs/design.md 7 節「モックとの一致」）
 // A. 構造: aria snapshot（要素の役割・文言・状態）
 // B. 見た目: クラス名を含む DOM を正規化したもの
-// どちらも <header> と <main> だけを比べる。モック上部の状態切り替えバーは <header> の外なので比較に入らない
+// どちらも <header> と <main> だけを比べる。
+// モック上部の状態切り替えバーは <header> の外なので比較に入らない
 
 const requestIdPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
 
@@ -27,14 +28,18 @@ export function mockUrl(file: MockFile, state: string): string {
   return `${pathToFileURL(resolve(mockDirectory, `${file}.html`)).href}?state=${state}`;
 }
 
-// ブラウザの中で動かす。DOM を正規化した文字列にする
+// DOM を正規化した文字列にする
 //  - 属性とクラス名は並べ替える
 //  - 空白は詰める（空白だけのテキストは捨てる）
 //  - 表示されていない（display: none）要素は除く
-//  - モックのスクリプトが要素を探すためだけの属性（id / for / data-view / data-request-id / onsubmit）は比べない
-//    （id と for の結び付きは A の aria snapshot で確かめる。React は useId で別の id を付けるため）
-//  - 入力欄の value は属性ではなく現在の値で比べる（モックは値をプロパティで入れ、React は属性にも出すため）
+//  - モックのスクリプトが要素を探すためだけの属性
+//    （id / for / data-view / data-request-id / onsubmit）は比べない。
+//    id と for の結び付きは A の aria snapshot で確かめる。React は useId で別の id を付けるため
+//  - 入力欄の value は属性ではなく現在の値で比べる
+//    （モックは値をプロパティで入れ、React は属性にも出すため）
 //  - 問い合わせ番号は伏せる
+// evaluate でブラウザに送って動かすので、外側の変数（requestIdPattern など）は参照できない。
+// 使うものはすべて関数の中に置く
 function serializeNormalizedDom(root: Element): string {
   const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
   const mask = (text: string): string => text.replaceAll(uuid, "<REQUEST_ID>");
@@ -120,6 +125,7 @@ async function takeSnapshots(page: Page): Promise<Snapshots> {
   return { aria: await takeAria(page), dom: await takeDom(page) };
 }
 
+// 描画を 1 回終えるまで待つ（requestAnimationFrame を 2 回重ねると、間に 1 回の描画が入る）
 async function waitForTwoFrames(page: Page): Promise<void> {
   await page.evaluate(
     () =>
@@ -133,7 +139,8 @@ async function waitForTwoFrames(page: Page): Promise<void> {
   );
 }
 
-// モックを開き、Tailwind（ブラウザ版）が CSS を作り終えて表示が落ち着くまで待って、スナップショットを取る
+// モックを開き、スナップショットを取る。
+// Tailwind（ブラウザ版）が CSS を作り終えて表示が落ち着くまで待つ
 export async function readMock(
   context: BrowserContext,
   file: MockFile,
@@ -161,7 +168,8 @@ export async function readMock(
   }
 }
 
-// 実装の表示がモックと一致するまで待つ（描画や取得の途中で落ちないよう、poll で再取得する）
+// 実装の表示がモックと一致するまで待つ。
+// 描画や取得の途中で落ちないよう、poll で取り直す
 export async function expectAriaMatchesMock(page: Page, mock: Snapshots): Promise<void> {
   await expect.poll(() => takeAria(page), { timeout: 10_000 }).toEqual(mock.aria);
 }

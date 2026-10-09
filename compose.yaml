@@ -1,7 +1,8 @@
 # 実行基盤はすべて Docker Compose（docs/design.md 6 節）
 # development: docker compose up app
-# 擬似本番:     GITHUB_TOKEN=... docker compose --profile prod up
-# E2E:          docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e
+# 擬似本番: GITHUB_TOKEN=... docker compose --profile prod up
+# E2E:
+#   docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e
 services:
   # development。ソースをマウントし next dev。lint / typecheck / 単体テストもこのサービスで実行する
   app:
@@ -10,6 +11,7 @@ services:
     command: sh -c "npm install && npm run dev"
     ports:
       - "3000:3000"
+    # node_modules は名前付きボリュームに置き、ホストに作らない
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -35,6 +37,7 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     profiles: ["prod"]
 
+  # ビルド時の env 検証にトークンが要るかどうかが違うので、app-prod とはサービスを分ける
   app-e2e:
     build:
       context: .
@@ -47,6 +50,7 @@ services:
 
   # E2E ランナー。app-e2e（fake の GitHub）に向けて Playwright を実行する
   e2e:
+    # 版は package.json の @playwright/test と揃える（ずれるとブラウザが見つからない）
     image: mcr.microsoft.com/playwright:v1.59.0-noble
     working_dir: /app
     command: sh -c "npm ci && npx playwright test"

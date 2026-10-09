@@ -11,16 +11,19 @@ const errorSchema = z.object({
   retryAfter: z.number().int().min(0).optional(),
 });
 
+// 成功の応答と見分けるために { error: ... } で 1 段包む（docs/design.md 4 節）
 const responseSchema = z.object({ error: errorSchema });
 
 export type ApiError = DeepReadonly<z.infer<typeof errorSchema>>;
 
 export type ErrorResponse = DeepReadonly<z.infer<typeof responseSchema>>;
 
+// ブラウザ側で BFF のエラー応答の JSON を ErrorResponse に解析する
 export function parseErrorResponse(input: unknown): Result<ErrorResponse, ParseError> {
   return safeParse(responseSchema, input);
 }
 
+// ApiError と違い requestId は必須。BFF が作るエラー応答には必ず問い合わせ番号を付ける
 export type ErrorResponseInput = {
   code: ApiError["code"];
   message: string;
@@ -38,7 +41,7 @@ export function createErrorResponse(input: ErrorResponseInput): ErrorResponse {
       message,
       requestId,
       ...(detail === undefined ? {} : { detail }),
-      // 規則（0 以上の整数）を満たす形にしてから出す。満たさないとブラウザ側の parse で別のエラーに化ける
+      // 規則（0 以上の整数）に丸めてから出す。外れるとブラウザ側の parse で別のエラーに化ける
       ...(retryAfter === undefined ? {} : { retryAfter: Math.max(0, Math.ceil(retryAfter)) }),
     },
   };

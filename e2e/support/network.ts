@@ -13,6 +13,7 @@ export async function holdRequests(page: Page, matcher: UrlMatcher): Promise<Hol
   const gate = Promise.withResolvers<undefined>();
   await page.route(matcher, async (route) => {
     await gate.promise;
+    // 止めている間にページが閉じられると continue は失敗する。テストの結果に関係しないので無視する
     await route.continue().catch(() => undefined);
   });
   return {

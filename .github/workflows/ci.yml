@@ -9,6 +9,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # GitHub を呼ばないので、トークン無しで E2E まで通る（docs/design.md 6 節）
     env:
       GITHUB_CLIENT: fake
     steps:

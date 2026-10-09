@@ -23,6 +23,7 @@ const nextButton = () => screen.getByRole("button", { name: "次へ →" });
 describe("PaginationNav", () => {
   it("1 ページ目は「前へ」が無効、「次へ」が有効で、現在 / 総ページ数を表示する。「次へ」で次のページへ", async () => {
     const user = userEvent.setup();
+    // GitHub は先頭 1,000 件までしか返さないので、総ページ数は 50 で頭打ちになる
     const { nav, onMove } = renderNav(1, 7297834);
     expect(nav).toHaveTextContent("1 / 50 ページ");
     expect(previousButton()).toBeDisabled();

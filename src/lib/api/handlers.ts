@@ -7,7 +7,8 @@ import type { SearchResult } from "@/lib/model/searchResult";
 import type { AppError } from "./appError";
 import type { Deps, RouteContext } from "./withErrorHandling";
 
-// 入力を解析して GitHubClient を呼び、Result を返すだけ。Response もログも作らない（docs/design.md 8 節）
+// 入力を解析して GitHubClient を呼び、Result を返すだけ。
+// Response もログも作らない（docs/design.md 8 節）
 
 export async function handleSearch(
   req: NextRequest,

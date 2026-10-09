@@ -1,4 +1,6 @@
 // src/mocks/fixtures/*.json（GitHub の生の JSON）から mock/fixtures.js を生成する
+// モックと E2E が同じデータを表示するため（docs/design.md 7 節）。fixture を変えたら再実行する
+// モックは file:// で開くので JSON を読み込めず、<script> で読める JS にする
 // 実行: docker compose run --rm --no-deps -T app node scripts/generate-mock-fixtures.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 

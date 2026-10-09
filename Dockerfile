@@ -25,12 +25,14 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     PORT=3000
+# curl は下の HEALTHCHECK が使う（alpine には入っていない）
 RUN apk add --no-cache curl
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000
+# compose の e2e サービスは、これが healthy になるまで Playwright を始めない
 HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=5 \
   CMD curl -fsS http://localhost:3000/api/health || exit 1
 CMD ["node", "server.js"]

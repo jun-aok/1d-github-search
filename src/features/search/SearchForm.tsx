@@ -15,8 +15,9 @@ export type SearchFormProps = {
 export function SearchForm({ query, busy, onSearch }: SearchFormProps) {
   const inputId = useId();
   const [draft, setDraft] = useState(query);
-  // URL の q が変わったら（ブラウザバック等）下書きを合わせる。effect ではなく描画中に前回の値と比べて直す
-  // （React の「props の変化に合わせて state を調整する」書き方。effect だと 1 回古い値で描画される）
+  // URL の q が変わったら（ブラウザバック等）下書きを合わせる。
+  // effect ではなく描画中に前回の値と比べて直す（React の「props の変化に合わせて
+  // state を調整する」書き方）。effect だと 1 回古い値で描画される
   const [syncedQuery, setSyncedQuery] = useState(query);
   if (query !== syncedQuery) {
     setSyncedQuery(query);

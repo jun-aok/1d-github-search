@@ -20,6 +20,7 @@ const DEFAULT_RETRY_AFTER_SECONDS = 60;
 
 function numberHeader(res: Response, name: string): number | null {
   const value = res.headers.get(name);
+  // Number("") は 0 になるので、空のヘッダーを 0 と読まないよう無しとして扱う
   if (value === null || value.trim() === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
@@ -40,6 +41,7 @@ function rateLimitFrom(res: Response, nowMs: number): GitHubError | null {
   const exhausted = res.headers.get("x-ratelimit-remaining") === "0";
   if (retryAfter === null && !exhausted) return null;
 
+  // x-ratelimit-reset は制限が戻る時刻（UNIX エポック秒）。retry-after は待つ秒数
   const reset = numberHeader(res, "x-ratelimit-reset");
   const seconds =
     retryAfter ?? (reset === null ? DEFAULT_RETRY_AFTER_SECONDS : reset - nowMs / 1000);
@@ -50,6 +52,7 @@ function rateLimitFrom(res: Response, nowMs: number): GitHubError | null {
   };
 }
 
+// GitHub の失敗応答を GitHubError に分ける（docs/design.md 4 節「エラーの対応表」）
 async function errorFromResponse(res: Response, nowMs: number): Promise<GitHubError> {
   const rateLimited = rateLimitFrom(res, nowMs);
   if (rateLimited !== null) return rateLimited;
@@ -67,6 +70,7 @@ export function createHttpGitHubClient(options: HttpGitHubClientOptions = {}): G
 
   async function get(url: URL): Promise<Result<unknown, GitHubError>> {
     const headers: Record<string, string> = {
+      // User-Agent が無いと GitHub は 403 を返す（docs/design.md 4 節）
       "User-Agent": "github-repository-search",
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
@@ -108,6 +112,7 @@ export function createHttpGitHubClient(options: HttpGitHubClientOptions = {}): G
       return getAndParse(url, parseGitHubSearch);
     },
     getRepo(path) {
+      // RepoPath は ? や # を通すので、クエリやフラグメントと読まれないよう各部を符号化する
       const owner = encodeURIComponent(path.owner);
       const name = encodeURIComponent(path.name);
       return getAndParse(new URL(`/repos/${owner}/${name}`, API_ORIGIN), parseGitHubRepo);

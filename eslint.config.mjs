@@ -47,7 +47,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // 設定ファイルは型情報付きの lint の対象外
+    // 直下の設定ファイルと scripts/ は型情報付きの lint の対象外（src/ は除く）
     files: ["*.mjs", "*.ts", "*.mts", "scripts/**/*.mjs"],
     ignores: ["src/**"],
     extends: [tseslint.configs.disableTypeChecked],

@@ -107,6 +107,7 @@ describe("handleRepo", () => {
     ["x", "."],
     ["a b", "x"],
     ["", "x"],
+    // owner の上限 39 文字を 1 文字超える
     ["a".repeat(40), "x"],
   ])("RepoPath にできない %j/%j は not_found で、GitHub に問い合わせない", async (owner, name) => {
     const { deps, repos } = recordingDeps();

@@ -11,7 +11,8 @@ const SUCCESS_STALE_TIME_MS = 60_000;
 const NO_CONDITION_KEY = ["search"] as const;
 
 // 取得中は前の結果を残す（ページ送り・別キーワード・同じキーワードの再検索で同じ扱い）。
-// 前が初期画面（null）なら残すものは無い。TanStack Query は関数が同じなら前回の値を使い回すので、モジュールに置く
+// 前が初期画面（null）なら残すものは無い。
+// TanStack Query は関数が同じなら前回の値を使い回すので、モジュールに置く
 function keepPreviousResult(
   previous: SearchResponse | null | undefined,
 ): SearchResponse | undefined {
@@ -31,14 +32,17 @@ export type SearchState = {
   readonly refresh: (condition: SearchCondition) => void;
 };
 
+// 検索結果を取得する（docs/design.md 5 節）。condition が null（初期画面）なら取得しない
 export function useSearch(condition: SearchCondition | null): SearchState {
   const queryClient = useQueryClient();
   // 条件なし（初期画面）の問い合わせは、取得せず「結果なし（null）」を持つ。
   // TanStack Query は前の結果として「最後にデータを持っていた問い合わせ」のデータを渡すので、
-  // 初期画面にも null というデータを持たせ、初期画面を挟んだ次の検索に前の結果を出さない（スケルトンにする）
+  // 初期画面にも null というデータを持たせ、初期画面を挟んだ次の検索では前の結果を出さず
+  // スケルトンにする
   const query = useQuery<SearchResponse | null>({
     queryKey: condition === null ? NO_CONDITION_KEY : searchQueryKey(condition),
-    // 例外を投げず Result を返す（失敗も data に入る）。前の結果を出している間も件数やページを正しく出せるよう、条件も一緒に持つ
+    // 例外を投げず Result を返す（失敗も data に入る）。
+    // 前の結果を出している間も件数やページを正しく出せるよう、条件も一緒に持つ
     queryFn:
       condition === null
         ? skipToken

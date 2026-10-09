@@ -142,6 +142,7 @@ describe("RepoDetailPage", () => {
 
     renderPage({ owner: "react", repo: "react" }, queryClient);
     expect(screen.getByRole("heading", { level: 1, name: "react/react" })).toBeInTheDocument();
+    // 取り直しが起きないことは待たないと確かめられないので、少し（50 ミリ秒）待ってから数える
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(requests).toHaveLength(1);
   });
@@ -156,6 +157,7 @@ describe("RepoDetailPage", () => {
     // 時計だけを進める（MSW の待ちは本物のタイマーのまま）
     vi.useFakeTimers({ toFake: ["Date"] });
     try {
+      // 成功を覚える 60 秒（useRepo の SUCCESS_STALE_TIME_MS）を過ぎた時刻にする
       vi.setSystemTime(Date.now() + 61_000);
       const hold = holdNextRepo(() => HttpResponse.json(repoReactReactDetail));
       renderPage({ owner: "react", repo: "react" }, queryClient);

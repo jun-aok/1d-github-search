@@ -10,9 +10,10 @@ import {
 } from "@/lib/model/searchCondition";
 
 // 検索ページの URL（?q=&page=）の読み書きをここに閉じ込める（docs/design.md 5 節）。
-// コンポーネントは useSearchParams や pushState を直接使わず、テストではこのフックの戻り値を偽物に差し替える
+// コンポーネントは useSearchParams や pushState を直接使わず、
+// テストではこのフックの戻り値を偽物に差し替える
 export type SearchUrl = {
-  // URL から解析した検索条件。q が無ければ null
+  // URL から解析した検索条件。q も page も無ければ null。page だけなど不正な URL は失敗
   readonly condition: Result<SearchCondition, ParseError> | null;
   // URL を書き換える
   readonly navigate: (condition: SearchCondition) => void;

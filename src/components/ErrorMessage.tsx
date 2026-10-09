@@ -9,7 +9,6 @@ export type ErrorMessageProps = {
 
 type Tone = { box: string; title: string; body: string; button: string; note: string };
 
-// エラー表示と再試行（docs/design.md 5・8 節）。クラス構成は mock/search.html・mock/detail.html のまま。
 // Tailwind はクラス名を文字列のまま探すので、色ごとのクラスは組み立てずに書き並べる
 const rateLimitedTone: Tone = {
   box: "rounded-md border border-amber-300 bg-amber-50 p-4",
@@ -27,6 +26,9 @@ const failedTone: Tone = {
   note: "mt-2 text-xs text-red-700",
 };
 
+// ApiError を案内文と再試行ボタンにして出す（docs/design.md 5・8 節）。
+// クラス構成は mock/search.html・mock/detail.html のまま。
+// button に type を付けないのもモックに合わせている。form の外なので送信はしない
 export function ErrorMessage({ error, failedTitle, onRetry }: ErrorMessageProps) {
   // レート制限の文言はモックどおり固定（retryAfter は画面に出さない）
   const { tone, title, body } =
@@ -55,7 +57,7 @@ export function ErrorMessage({ error, failedTitle, onRetry }: ErrorMessageProps)
             問い合わせ番号: <span>{error.requestId}</span>
           </p>
         )}
-        {/* 開発中はログを見に行かずに原因が分かるよう、詳細を折りたたみで出す。production では出さない */}
+        {/* 開発中はログを見ずに原因が分かるよう、詳細を出す。production では出さない */}
         {error.detail === undefined || process.env.NODE_ENV === "production" ? null : (
           <details className={tone.note}>
             <summary>詳細</summary>

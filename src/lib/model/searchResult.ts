@@ -25,6 +25,7 @@ export function parseSearchResult(input: unknown): Result<SearchResult, ParseErr
       items.push(r.value);
       return;
     }
+    // 何件目のどの項目かが分かるよう、path に items.N を前置する
     for (const issue of r.error.issues) {
       const at = `items.${String(index)}`;
       const path = issue.path === "" ? at : `${at}.${issue.path}`;

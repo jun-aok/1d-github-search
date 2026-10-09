@@ -34,12 +34,13 @@ export type Handler = (
   deps: Deps,
 ) => Promise<Result<unknown, AppError>>;
 
-// GitHub のステータスとレート制限の残り・回復時刻。どのトークンの枠を使い切ったかを後から確かめるため
+// GitHub のステータスと x-ratelimit-remaining / reset をログの項目にする。応答が無かった失敗では空
 function responseFields(response: GitHubResponseInfo | undefined): LogFields {
   return response === undefined ? {} : { ...response };
 }
 
-// 記録するもの（docs/design.md 8 節）: requestId、ルート、q と page（検索条件は個人情報ではない）、原因、
+// 失敗を種類に応じた水準で記録する（docs/design.md 8 節）。
+// 記録するもの: requestId、ルート、q と page（検索条件は個人情報ではない）、原因、
 // GitHub のステータスと x-ratelimit-*、所要時間。
 // 記録しないもの: トークン、Authorization ヘッダー、リクエスト全文
 function logFailure(logger: Logger, error: AppError, fields: LogFields): void {
@@ -47,7 +48,9 @@ function logFailure(logger: Logger, error: AppError, fields: LogFields): void {
     case "bad_request":
     case "not_found":
     case "invalid_request":
+      // 利用者の入力が原因の想定内の失敗なので記録しない（docs/design.md 8 節）
       return;
+    // 障害ではないが、頻度を見るために warn で残す
     case "rate_limited":
       logger.log("warn", "GitHub のレート制限に達しました", {
         ...fields,
@@ -87,14 +90,15 @@ function requestFields(
   return {
     requestId,
     route: req.nextUrl.pathname,
+    // 不正な長い入力でログが膨らまないよう切る。q は検索条件の上限と同じ 256 文字
     ...(q === null ? {} : { q: q.slice(0, 256) }),
     ...(page === null ? {} : { page: page.slice(0, 16) }),
     durationMs: Math.round(performance.now() - startedAt),
   };
 }
 
-// すべての Route Handler を包む共通部品。requestId の発行、Result → Response の変換、ログ、想定外の例外の捕捉は
-// ここにだけ集まる（docs/design.md 8 節）
+// すべての Route Handler を包む共通部品（docs/design.md 8 節）。requestId の発行、
+// Result → Response の変換、ログ、想定外の例外の捕捉はここにだけ集まる
 export function withErrorHandling(handler: Handler, deps: Deps = defaultDeps) {
   return async (req: NextRequest, ctx: RouteContext): Promise<Response> => {
     const requestId = crypto.randomUUID();

@@ -11,6 +11,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    // window.location.origin。MSW の BFF_ORIGIN（src/mocks/bffHandlers.ts）と揃える
     environmentOptions: { jsdom: { url: "http://localhost:3000/" } },
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],

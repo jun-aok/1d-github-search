@@ -7,7 +7,8 @@ import { toSearchParams, type SearchCondition } from "@/lib/model/searchConditio
 import { parseSearchResult, type SearchResult } from "@/lib/model/searchResult";
 
 // ブラウザから BFF を呼ぶ（docs/design.md 5・8 節）。例外を投げず Result を返す。
-// BFF のエラー応答は ApiError に、BFF に届かない・JSON でない・形が違うといった失敗も ApiError（通信エラー）に変換する
+// BFF のエラー応答は ApiError に、BFF に届かない・JSON でない・形が違うといった失敗も
+// ApiError（通信エラー）に変換する
 
 // jsdom では相対 URL の fetch が解決できないことがあるので絶対 URL にする
 function bffUrl(path: string): URL {

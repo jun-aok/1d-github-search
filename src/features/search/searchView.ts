@@ -4,7 +4,8 @@ import type { ParseError, Result } from "@/lib/model/result";
 import type { SearchCondition } from "@/lib/model/searchCondition";
 import type { SearchResult } from "@/lib/model/searchResult";
 
-// 検索の応答と、それを問い合わせた条件。前の結果を表示している間（keepPreviousData）も、件数やページは応答の条件で出す
+// 検索の応答と、それを問い合わせた条件。
+// 前の結果を表示している間（keepPreviousData）も、件数やページは応答の条件で出す
 export type SearchResponse = {
   readonly condition: SearchCondition;
   readonly result: Result<SearchResult, ApiError>;
@@ -35,13 +36,15 @@ export type SearchViewInput = {
   readonly isFetching: boolean;
 };
 
+// URL の条件と取得の状態から、検索ページに出す状態を 1 つに決める（docs/design.md 5 節）
 export function searchView(input: SearchViewInput): SearchView {
   const { condition } = input;
   if (condition === null || !condition.ok) return { kind: "initial" };
   // 条件があって応答がまだ無いのは、最初の取得を待っている間だけ
   if (input.response === undefined) return { kind: "loading" };
   const settled = settledView(input.response);
-  // 取得中は前の結果を残して薄く表示する。ページ送り・別キーワード・同じキーワードの再検索で区別しない
+  // 取得中は前の結果を残して薄く表示する。
+  // ページ送り・別キーワード・同じキーワードの再検索で区別しない
   return input.isFetching ? { kind: "refreshing", previous: settled } : settled;
 }
 

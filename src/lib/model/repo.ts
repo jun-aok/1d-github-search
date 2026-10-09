@@ -7,6 +7,7 @@ const count = z.number().int().min(0);
 const httpsUrl = z.url({ protocol: /^https$/ });
 
 const summarySchema = z.object({
+  // 同一判定（一覧の key など）には id を使う。fullName は名称変更・移管で変わる（docs/design.md 3 節）
   id: count,
   fullName: z.string(),
   owner: z.object({ login: z.string(), avatarUrl: httpsUrl }),
