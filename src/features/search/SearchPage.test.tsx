@@ -58,6 +58,8 @@ function holdNextSearch() {
 }
 
 const guideText = "キーワードを入力して GitHub のリポジトリを検索します。";
+const limitNotice =
+  "GitHub の検索 API の制限により、表示できるのは先頭の 1,000 件（50 ページ）までです。";
 
 // useSearchUrl の偽物。URL の代わりにメモリ上で検索条件を読み書きする（docs/design.md 5 節）
 function MemoryUrlSearchPage({
@@ -112,6 +114,18 @@ describe("SearchPage", () => {
     expect(screen.getByLabelText("リポジトリ名")).toHaveValue("react");
     expect(screen.getByRole("button", { name: "検索" })).toBeEnabled();
     expect(requests.map((u) => u.search)).toEqual(["?q=react&page=2"]);
+  });
+
+  it("結果が 1,000 件を超えるときは、件数の直後に表示できる上限の注意書きを出す", async () => {
+    renderPage(ok(aSearchCondition("react")));
+    const summary = await screen.findByText("7,297,834 件中 1〜20 件を表示");
+    expect(summary.nextElementSibling).toHaveTextContent(limitNotice);
+  });
+
+  it("結果が 1,000 件以下のときは、上限の注意書きを出さない", async () => {
+    renderPage(ok(aSearchCondition("__few__")));
+    expect(await screen.findByText("2 件中 1〜2 件を表示")).toBeInTheDocument();
+    expect(screen.queryByText(limitNotice)).toBeNull();
   });
 
   it("0 件なら一致なしの案内を出し、一覧とページネーションは出さない", async () => {
