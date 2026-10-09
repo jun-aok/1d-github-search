@@ -6,7 +6,7 @@ import { ErrorMessage } from "@/components/ErrorMessage";
 import { Faded } from "@/components/Faded";
 import { ListSkeleton } from "@/components/Skeleton";
 import { formatNumber } from "@/lib/format";
-import { PER_PAGE } from "@/lib/model/pagination";
+import { exceedsMaxResults, MAX_PAGE, MAX_RESULTS, PER_PAGE } from "@/lib/model/pagination";
 import {
   parseSearchCondition,
   toSearchParams,
@@ -141,6 +141,12 @@ function Settled({
           <p className="text-sm text-gray-600" aria-live="polite">
             {`${formatNumber(view.result.totalCount)} 件中 ${String(view.range.from)}〜${String(view.range.to)} 件を表示`}
           </p>
+          {exceedsMaxResults(view.result.totalCount) && (
+            // 件数は 1,000 件を超えて出るのに 50 ページで止まるので、理由と上限を件数のすぐ下で示す（docs/design.md 5 節）
+            <p className="mt-1 text-sm text-red-600">
+              {`GitHub の検索 API の制限により、表示できるのは先頭の ${formatNumber(MAX_RESULTS)} 件（${String(MAX_PAGE)} ページ）までです。`}
+            </p>
+          )}
           <RepoList items={view.result.items} busy={busy} />
           <PaginationNav pagination={view.pagination} onMove={onMove} />
         </section>
