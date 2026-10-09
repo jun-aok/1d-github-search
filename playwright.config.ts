@@ -8,9 +8,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: process.env.CI !== undefined,
   retries: 0,
+  // 待ち時間は短めにする。Red が多いときに 1 件ごとのタイムアウト待ちが積み上がるのを抑える（遅い処理は無い）
+  timeout: 15_000,
+  expect: { timeout: 2_000 },
   reporter: process.env.CI !== undefined ? "list" : "html",
   use: {
     baseURL,
+    actionTimeout: 5_000,
+    navigationTimeout: 10_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
