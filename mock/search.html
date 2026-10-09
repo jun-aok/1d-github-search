@@ -150,6 +150,12 @@
         const { total_count, items } = state === "few" ? SEARCH_FEW_FIXTURE : SEARCH_FIXTURE;
         const page = 1;
         document.getElementById("summary").textContent = summaryText(total_count, page, items.length);
+        // 1,000 件を超えるときだけ、件数の直後に注意書きを出す（どのページでも同じ）
+        document.getElementById("limit-note")?.remove();
+        if (total_count > MAX_RESULTS) {
+          document.getElementById("summary").insertAdjacentHTML("afterend",
+            `<p id="limit-note" class="mt-1 text-sm text-gray-700">GitHub の検索 API の制限により、表示できるのは先頭の ${fmt(MAX_RESULTS)} 件（${MAX_RESULTS / PER_PAGE} ページ）までです。</p>`);
+        }
         const list = document.getElementById("list");
         list.innerHTML = renderList(items);
         // 取得中は前の結果を薄く表示（ページ送り・別キーワード・再検索のいずれも同じ）
