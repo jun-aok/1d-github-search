@@ -120,3 +120,27 @@ test.describe("検索ページ: 件数表示", () => {
     await expectSearchUrl(page, "__few__", 1);
   });
 });
+
+test.describe("検索ページ: 1,000 件を超える結果の注意書き", () => {
+  const notice = "GitHub の検索 API の制限により、表示できるのは先頭の 1,000 件（50 ページ）までです。";
+
+  test("1,000 件を超える（react）と、1 ページ目にも最終の 50 ページ目にも注意書きを表示する", async ({
+    page,
+  }) => {
+    await gotoSearch(page, "react");
+    await expect(summaryText(page, "7,297,834 件中 1〜20 件を表示")).toBeVisible();
+    await expect(page.getByText(notice, { exact: true })).toBeVisible();
+
+    await gotoSearch(page, "react", 50);
+    await expect(summaryText(page, "7,297,834 件中 981〜1000 件を表示")).toBeVisible();
+    await expect(page.getByText(notice, { exact: true })).toBeVisible();
+  });
+
+  test("1,000 件以下（__few__、2 件）なら注意書きを表示しない", async ({ page }) => {
+    await gotoSearch(page, "__few__");
+    await expect(
+      summaryText(page, `${String(searchFew.total_count)} 件中 1〜2 件を表示`),
+    ).toBeVisible();
+    await expect(page.getByText(notice, { exact: true })).toHaveCount(0);
+  });
+});
