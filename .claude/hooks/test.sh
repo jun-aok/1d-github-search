@@ -5,7 +5,7 @@
 # E2E は前回の実行からソースに変更が無ければ再実行しない（結果をハッシュで覚える）
 # 失敗が MAX_BLOCKS 回連続したら、無限ループを防ぐために警告を出して通す
 # 回数は UserPromptSubmit（ユーザーの発言）と、成功でリセットされる
-MAX_BLOCKS=15
+MAX_BLOCKS=5
 cd "$CLAUDE_PROJECT_DIR" || exit 0
 
 input=$(cat)

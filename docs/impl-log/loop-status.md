@@ -33,7 +33,7 @@
 
 ## 運用上の注意
 
-- **Stop フック**（`.claude/hooks/test.sh`）: lint → typecheck → 単体テスト → E2E（`.claude/loop-active` があるとき）。E2E の結果はソースのハッシュで覚え、変更が無ければ再実行しない。失敗が 15 回連続で警告して通す
+- **Stop フック**（`.claude/hooks/test.sh`）: lint → typecheck → 単体テスト → E2E（`.claude/loop-active` があるとき）。E2E の結果はソースのハッシュで覚え、変更が無ければ再実行しない。失敗が 5 回連続で警告して通す
 - **E2E の所要時間**: ほぼ Green なら約 2 分、全件 Red だと長い（待ち時間を短くする前は 11 分）。`playwright.config.ts` の待ち時間（テスト 15 秒、確認 2 秒、操作 5 秒、遷移 10 秒）を短くしたので、全件 Red でも 3〜4 分の見込み（未計測）
 - **`.claude/loop-active`**: ユーザーだけが作る・消す。ユーザーがループを一時停止するときはこのファイルを外す（E2E が判定から外れる）
 - **`nextjs-implementer` の誤検知**: API のセーフガード（`[reasoning_extraction]`）が、サブエージェントの**最初の応答**を止め、何もせず終わることがある。`nextjs-implementer` を subagent_type に指定した本番の依頼で、Sonnet・Opus とも 8 回中 6 回起きた（1 回は止められたあと立ち直った）。試験の形の依頼（計画だけ返す）は 5 回とも通った。3 単位目で、**`general-purpose` に「`.claude/agents/nextjs-implementer.md` の本文を読んで従う」と指示して同じ依頼を出したところ、止められずに最後まで進んだ**（1 回のみ。モデルは Opus）。原因は確定していないが、定義をシステムプロンプトとして入れていることが関わっていそう
