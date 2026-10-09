@@ -154,7 +154,7 @@
         document.getElementById("limit-note")?.remove();
         if (total_count > MAX_RESULTS) {
           document.getElementById("summary").insertAdjacentHTML("afterend",
-            `<p id="limit-note" class="mt-1 text-sm text-gray-700">GitHub の検索 API の制限により、表示できるのは先頭の ${fmt(MAX_RESULTS)} 件（${MAX_RESULTS / PER_PAGE} ページ）までです。</p>`);
+            `<p id="limit-note" class="mt-1 text-sm text-red-600">GitHub の検索 API の制限により、表示できるのは先頭の ${fmt(MAX_RESULTS)} 件（${MAX_RESULTS / PER_PAGE} ページ）までです。</p>`);
         }
         const list = document.getElementById("list");
         list.innerHTML = renderList(items);
