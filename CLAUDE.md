@@ -44,6 +44,7 @@ GITHUB_TOKEN=... docker compose --profile prod up --build   # 擬似本番（pro
 - ループ中は二重ループ: Red の E2E を 1 グループ選び、内側で TDD（単体テスト 1 件 → 実装 → Green → リファクタリング → コミット）を回す
 - E2E が 1 グループ Green になるたびに `code-reviewer` にレビューさせ、「必ず直す」指摘が無くなってから次へ進む。結果は `docs/review-log/` に記録。最後に全体レビュー
 - 完成 = lint / 型チェック / 単体テスト / E2E がすべて通ること。Stop フックが判定する
+- 完成後の修正・機能の追加は「1. 仕様（requirements / design / test-cases-e2e）→ 2. モック（`mock/*.html`）で確認 → 3. 実装（E2E → TDD → レビュー）」の順。各段階でユーザーの承認を得てから次へ
 - テストを通すためにテスト側を弱めない。`.claude/loop-active` はユーザーだけが操作する
 - 手順の詳細は `docs/workflow.md`
 
