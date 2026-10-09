@@ -68,7 +68,7 @@ E2E が 1 グループ Green になるたびに、`code-reviewer` エージェ�
 1. `npm run lint`
 2. `npm run typecheck`
 3. `npm test`（単体・コンポーネント）
-4. `npm run test:e2e`（`.claude/loop-active` があるときだけ。1〜3 が通ってから）
+4. E2E（`docker compose --profile e2e up …`。`.claude/loop-active` があるときだけ。1〜3 が通ってから）
 
 差し戻しが 5 回連続したら、無限ループを防ぐために警告を出して通す。回数はユーザーの発言と成功でリセットされる
 
@@ -105,7 +105,7 @@ E2E が 1 グループ Green になるたびに、`code-reviewer` エージェ�
 - 要件にない機能を勝手に追加しない。追加したい場合は先に提案する
 - 設計判断をしたときは、理由を `docs/design.md` の該当箇所に「→ 理由:」として残す（README の「選択理由」の元ネタ）
 - 技術スタックを変更・追加したときは、`CLAUDE.md` の表と README の「選択理由」を同時に更新する
-- シークレットをコミットしない。環境変数は `.env.local` に置き、`.env.example` を用意する
+- シークレットをコミットしない。環境変数は `.env` に置き（Docker Compose が読む）、`.env.example` を用意する
 - コード中のコメントと README は日本語、識別子は英語
 
 ## AI 利用の記録

@@ -18,7 +18,7 @@ GitHubのリポジトリーを検索するwebアプリケーションをNext.js�
 | 実行基盤 | Docker Compose（development / e2e / production の 3 構成。ホストに Node.js は不要） |
 | CI | GitHub Actions（lint / typecheck / 単体テスト / E2E。すべて Docker Compose 経由） |
 
-環境変数は `.env.local` に置く。`GITHUB_TOKEN`（production では必須、サーバー側のみ）、`GITHUB_CLIENT`（`http` | `fake`）。
+環境変数は `.env` に置く（Docker Compose が読むのは `.env` だけ。`.env.local` は `compose.yaml` が空の値を渡すため効かない）。`GITHUB_TOKEN`（production では必須、サーバー側のみ）、`GITHUB_CLIENT`（`http` | `fake`）。
 
 ## コマンド
 

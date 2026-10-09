@@ -39,12 +39,14 @@ src/
     error.tsx / global-error.tsx       描画時の想定外の例外（8 節）
     not-found.tsx                      存在しない URL
   features/
-    search/      SearchForm, RepoList, RepoListItem(Link は prefetch={false}), PaginationNav, useSearch, useSearchUrl(URL の読み書き)
-    repo/        RepoDetailView, StatCard, NotFound, useRepo
-  components/    Skeleton, ErrorMessage, EmptyMessage（画面共通）
+    search/      SearchPage, SearchForm, RepoList, RepoListItem(Link は prefetch={false}), PaginationNav,
+                 searchView(画面の状態を求める純粋関数), useSearch, useSearchUrl(URL の読み書き)
+    repo/        RepoDetailPage, RepoDetailView, StatCard, NotFound, useRepo
+  components/    Skeleton, ErrorMessage, EmptyMessage, Faded(取得中に薄くする), UnexpectedError(error.tsx の表示)（画面共通）
   lib/
     model/       モデルの型と parse 関数。result.ts, searchCondition.ts, repoPath.ts,
-                 repo.ts(RepoSummary, RepoDetail), searchResult.ts, pagination.ts, apiError.ts
+                 repo.ts(RepoSummary, RepoDetail), searchResult.ts, pagination.ts, apiError.ts,
+                 zodResult.ts(ZodError → ParseError の詰め替え), readonly.ts(DeepReadonly 型)
     github/      githubClient.ts(interface), httpGitHubClient.ts(本物。fetch と ヘッダー), fakeGitHubClient.ts(偽物),
                  index.ts(環境変数で選ぶ), parse.ts(GitHub の JSON の形を確かめ、こちらの項目名に写す), githubError.ts
     api/         handlers.ts(handleSearch, handleRepo), appError.ts(AppError), respond.ts(AppError → Response の変換表),
@@ -52,9 +54,9 @@ src/
     http/        readJson.ts(res.json() を unknown で受ける)
     observability/ logger.ts(interface), errorReporter.ts(interface), console.ts, memory.ts, index.ts(既定の実装を返す。テストは Deps で注入)
     format.ts    数値のカンマ区切り、アイコン URL のサイズ指定（avatarUrl）
-    model/readonly.ts  DeepReadonly 型
     env.ts       環境変数 → Env。next.config.ts から読み込む
   mocks/         MSW ハンドラ, fixtures/*.json（単体・コンポーネント・E2E で共有）
+  test/          builders.ts(テスト用のモデルの値を parse 経由で作る), setup.ts(Vitest の共通設定)
 mock/            画面モック（静的 HTML、Tailwind v4 のブラウザ版）。E2E の DOM 比較の基準。fixtures.js は src/mocks/fixtures から生成
 ```
 
@@ -370,7 +372,7 @@ page.tsx
 - 環境変数は `lib/env.ts` で `Env` に変換し、`next.config.ts` から import する。`parseEnv` は他のモデルと同じく `Result` を返し、例外を投げるのはモジュールの最上位の `env` だけ（ビルドと起動を止めるため）→ 理由: `next build` と `next start` の両方で評価されるので、トークンの設定漏れがデプロイ時に止まる。リクエストが来てから気づくことがない
   - エラーメッセージは「`GITHUB_TOKEN` が未設定です。… を参照」のように、何をすればよいか分かる文にする
   - CI のビルドと E2E は `GITHUB_CLIENT=fake` で行う（GitHub を呼ばず、トークンも不要）
-  - `.env.example` に記載。`NEXT_PUBLIC_` は付けない
+  - `.env.example` に記載し、`.env` にコピーして使う。Docker Compose が変数展開に読むのは `.env` だけで、`.env.local` は `compose.yaml` が空の `GITHUB_TOKEN` を渡すため Next.js も読まない（定義済みのキーは上書きしない）。`NEXT_PUBLIC_` は付けない
 - 型安全の強制（3 節の原則）:
   - tsconfig: `strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、`noFallthroughCasesInSwitch`（確認済み: zod の `.optional()` は `?: T | undefined` と推論される。`z.infer` をそのまま型にすれば問題ないが、手書きの型に `?: T` と書いて代入すると `exactOptionalPropertyTypes` でエラーになるので、手書きするなら `?: T | undefined` と書く）
   - ESLint（typescript-eslint の `strictTypeChecked`）: `consistent-type-assertions`（`assertionStyle: "never"`）、`no-restricted-imports`（zod の import を許可した場所以外で禁止）、`no-explicit-any`、`no-non-null-assertion`、`no-unsafe-*`、`switch-exhaustiveness-check`、`ban-ts-comment`

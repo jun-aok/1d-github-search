@@ -1,4 +1,4 @@
-# 実行基盤はすべて Docker Compose（docs/design.md 6 節）
+# 実行基盤はすべて Docker Compose（docs/design.md 6 節）。環境変数は .env に置く（自動で読まれる）
 # development: docker compose up app
 # 擬似本番: GITHUB_TOKEN=... docker compose --profile prod up
 # E2E:
