@@ -1,12 +1,12 @@
 # E2E テスト（Playwright）
 
 `docs/workflow.md`「ループの前」3 番で書いた E2E。**これが全部通れば完成**と言えるかを、レビューするための一覧。
-アプリ本体が無い段階で書いたので、書いた時点では `GET /api/health` などを除いてすべて Red（失敗）が正しい。
+アプリ本体が無い段階で書いたので、書いた時点では `GET /api/health` などを除いてすべて Red（失敗）が正しい。現在はすべて Green。
 
 - 対象: `app-e2e`（production ビルド + `GITHUB_CLIENT=fake`）。GitHub は `FakeGitHubClient`（`src/mocks/fixtures/*.json`）
 - 実行: `docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e`（終わったら `docker compose --profile e2e down`）
 - プロジェクト: `desktop`（Desktop Chrome。`*.mobile.spec.ts` 以外すべて）と `mobile`（Pixel 7。`*.mobile.spec.ts` だけ）。`playwright.config.ts` で分けている
-- 合計 166 件（desktop 153 + mobile 13）。1 件ごとに独立（実行順や他のテストの状態に依存しない）。`skip` / `only` / `fixme` は使っていない
+- 合計 168 件（desktop 155 + mobile 13）。1 件ごとに独立（実行順や他のテストの状態に依存しない）。`skip` / `only` / `fixme` は使っていない
 
 ## 使うキーワード（FakeGitHubClient）
 
@@ -117,7 +117,7 @@
 | q が 257 文字 | URL のパラメータが不正なときは検索せず初期画面。URL も / に書き換える |
 
 
-### `e2e/search-results.spec.ts`（9 件）
+### `e2e/search-results.spec.ts`（11 件）
 
 | テスト | 対応する要件・設計 |
 | --- | --- |
@@ -130,6 +130,8 @@
 | 2 ページ目は「N 件中 21〜40 件を表示」 | 件数表示「N 件中 a〜b 件を表示」（a・b の式） |
 | 最終ページ（50 ページ目）は「N 件中 981〜1000 件を表示」で、次へは無効 | 件数表示「N 件中 a〜b 件を表示」（a・b の式） |
 | 結果が 1 ページに収まるとき（2 件）は「2 件中 1〜2 件を表示」で、1 / 1 ページ | 件数表示「N 件中 a〜b 件を表示」（a・b の式） |
+| 1,000 件を超える（react）と、1 ページ目にも最終の 50 ページ目にも注意書きを表示する | 結果が 1,000 件を超えるとき、件数表示の下に注意書き（どのページでも） |
+| 1,000 件以下（__few__、2 件）なら注意書きを表示しない | 1,000 件以下では表示しない |
 
 
 ### `e2e/search-pagination.spec.ts`（8 件）
@@ -246,6 +248,6 @@
 - 「description 1 行省略」: 見た目の調整だが、「行の高さが揃う」ことで間接的に確かめている
 - 「モバイル幅では 1 カラム」: 検索・詳細とも元々 1 カラムのため、横スクロールが無いことの確認に含めた
 - 「検索ボタンの無効 = 読み込み中」: 最初の検索中とページ移動中、再検索中で確かめている
-- 範囲外ページ・ページ移動後の URL の `page=1` の書き方（省略か明示か）は決まっていないので、`page` の省略は 1 ページ目として扱って比べている
-- design 5 節にだけある振る舞い（要件に明記なし）を 3 件含む: 失敗は覚えず取り直す（`search-states`）、一覧 → 詳細 → 戻るで再取得しない（`navigation`）、BFF のエラー応答の形（`bff-errors`）。不要なら該当テストを外す
-- レート制限の「約 N 秒後に再試行できます」（design 5 節）は、モックに無く、fake が `retryAfter` を返すかも不明なので、テストにしていない。実装すると DOM 比較（B）がモックと食い違う可能性がある
+- 1 ページ目の URL は `page` を省略する（`/?q=react`）と決定。テストもそれで比べている
+- design 5 節にだけある振る舞い（要件に明記なし）を 3 件含む: 失敗は覚えず取り直す（`search-states`）、一覧 → 詳細 → 戻るで再取得しない（`navigation`）、BFF のエラー応答の形（`bff-errors`）。レビューの結果、残すことに決定
+- レート制限の文言はモックどおり固定。「約 N 秒後に再試行できます」は設計から外した（`retryAfter` は応答に含めるが画面には出さない）

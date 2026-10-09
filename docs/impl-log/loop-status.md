@@ -1,23 +1,18 @@
-# ループの状態（再開用）
+# ループの状態（完了時点の記録）
 
-新しいセッションで続きを始めるときは、`CLAUDE.md` → このファイル → `docs/workflow.md` の順に読む。
+初回のループは 2026-10-09 に完了し、README まで書き終えてすべて push 済み。以下はその時点の記録で、再開用には使わない。完成後の修正は `docs/workflow.md` の「完成後の修正・機能の追加」に従う。
 
 ## 終わっている単位
 
 | 順 | 単位 | 状態 | 記録 |
 | --- | --- | --- | --- |
 | 0 | 仕様策定、初期セットアップ、E2E（166 件）、スパイク | 完了。push 済み | `2026-10-08-setup.md`、`docs/test-cases-e2e.md` |
-| 1 | モデルの型と解析（`src/lib/model/`、`src/lib/format.ts`） | 完了。159 テスト、23 コミット（未 push） | `2026-10-08-2219-model.md` |
-| 2 | ログの抽象化、GitHubClient、BFF、Route Handler 2 つ | 完了。251 テスト、`bff-errors` 8 件 Green、21 コミット（未 push）。レビュー承認 | `2026-10-08-2316-bff.md`、`docs/review-log/2026-10-08-bff.md` |
-| 3 | 検索ページ | 完了。295 テスト、検索ページ関連の E2E Green、46 コミット（未 push）。レビュー承認 | `2026-10-08-2355-search-page.md`、`2026-10-09-0007-search-page-review-fix.md`、`docs/review-log/2026-10-09-search-page.md` |
-| 4 | 詳細ページ | 完了。315 テスト、E2E 166 件すべて Green、19 コミット（未 push）。レビュー済み（必ず直すは無し） | `2026-10-09-0016-repo-detail.md`、`2026-10-09-0025-repo-detail-review-fix.md`、`docs/review-log/2026-10-09-repo-detail.md` |
-| 5a | 全体レビュー | 完了。327 テスト、E2E 166 件すべて Green。指摘の修正 10 コミット（未 push）。再レビューで承認 | `2026-10-09-0038-final-review-fix.md`、`docs/review-log/2026-10-09-final.md` |
-
-## 次にやること（`docs/design.md` の順）
-
-| 順 | 単位 | 通るはずの E2E |
-| --- | --- | --- |
-| 5b | README（工夫した点、選択理由、スコープ外、AI 利用レポート = `docs/ai-usage.md` から） | — |
+| 1 | モデルの型と解析（`src/lib/model/`、`src/lib/format.ts`） | 完了。159 テスト、23 コミット | `2026-10-08-2219-model.md` |
+| 2 | ログの抽象化、GitHubClient、BFF、Route Handler 2 つ | 完了。251 テスト、`bff-errors` 8 件 Green、21 コミット。レビュー承認 | `2026-10-08-2316-bff.md`、`docs/review-log/2026-10-08-bff.md` |
+| 3 | 検索ページ | 完了。295 テスト、検索ページ関連の E2E Green、46 コミット。レビュー承認 | `2026-10-08-2355-search-page.md`、`2026-10-09-0007-search-page-review-fix.md`、`docs/review-log/2026-10-09-search-page.md` |
+| 4 | 詳細ページ | 完了。315 テスト、E2E 166 件すべて Green、19 コミット。レビュー済み（必ず直すは無し） | `2026-10-09-0016-repo-detail.md`、`2026-10-09-0025-repo-detail-review-fix.md`、`docs/review-log/2026-10-09-repo-detail.md` |
+| 5a | 全体レビュー | 完了。327 テスト、E2E 166 件すべて Green。指摘の修正 10 コミット。再レビューで承認 | `2026-10-09-0038-final-review-fix.md`、`docs/review-log/2026-10-09-final.md` |
+| 5b | README（工夫した点、選択理由、スコープ外、AI 利用レポート = `docs/ai-usage.md` から） | 完了 | — |
 
 各単位の終わり（E2E 1 グループ Green）に `code-reviewer` を挟む（`docs/workflow.md` の「レビュー」）。記録は `docs/review-log/`。
 
