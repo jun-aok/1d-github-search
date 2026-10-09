@@ -1,5 +1,13 @@
 import { aSearchCondition } from "@/test/builders";
-import { MAX_PAGE, MAX_RESULTS, PER_PAGE, pagination, resultRange, totalPages } from "./pagination";
+import {
+  MAX_PAGE,
+  MAX_RESULTS,
+  PER_PAGE,
+  exceedsMaxResults,
+  pagination,
+  resultRange,
+  totalPages,
+} from "./pagination";
 
 describe("定数", () => {
   it("1 ページ 20 件、GitHub の検索は先頭 1,000 件まで、最大 50 ページ", () => {
@@ -21,6 +29,17 @@ describe("totalPages", () => {
     [1_000_000, 50],
   ])("%i 件なら %i ページ", (totalCount, expected) => {
     expect(totalPages(totalCount)).toBe(expected);
+  });
+});
+
+describe("exceedsMaxResults（1,000 件を超える結果の注意書きを出すか）", () => {
+  it.each([
+    [0, false],
+    [1000, false],
+    [1001, true],
+    [7_297_834, true],
+  ])("%i 件なら %s", (totalCount, expected) => {
+    expect(exceedsMaxResults(totalCount)).toBe(expected);
   });
 });
 
