@@ -1,36 +1,221 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GitHub リポジトリ検索
 
-## Getting Started
+GitHub のリポジトリをキーワードで検索し、一覧から選んだリポジトリの詳細（オーナーアイコン、言語、Star / Watcher / Fork / Issue 数）を表示する Web アプリケーションです。
 
-First, run the development server:
+- 検索ページ `/?q=react&page=2`: キーワード検索、1 ページ 20 件のページネーション
+- 詳細ページ `/repos/{owner}/{repo}`: モーダルではなくページ。直接アクセスもできる
+
+## 動かし方
+
+ホストに必要なのは Docker（Docker Compose）だけです。Node.js や `node_modules` はすべてコンテナの中に置きます。
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local                               # GITHUB_TOKEN は development では任意
+docker compose run --rm app npm install                  # 初回のみ
+docker compose up app                                    # 開発サーバー http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```bash
+GITHUB_TOKEN=... docker compose --profile prod up --build   # 擬似本番（production イメージ + 本物の GitHub）
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+検査:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose run --rm --no-deps -T app npm run lint        # ESLint + Prettier
+docker compose run --rm --no-deps -T app npm run typecheck
+docker compose run --rm --no-deps -T app npm test            # 単体・コンポーネント（Vitest）
+docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e   # E2E（約 2 分）
+```
 
-## Learn More
+| 環境変数 | 内容 |
+| --- | --- |
+| `GITHUB_TOKEN` | GitHub の Personal Access Token（権限不要）。production では必須で、未設定ならビルド・起動が止まる |
+| `GITHUB_CLIENT` | `http`（本物の GitHub。既定）または `fake`（固定データ。E2E・CI 用） |
 
-To learn more about Next.js, take a look at the following resources:
+## 技術スタック
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| 項目 | 採用 |
+| --- | --- |
+| フレームワーク | Next.js 16（App Router）/ React 19 / TypeScript（strict） |
+| スタイル | Tailwind CSS v4（コンポーネントライブラリは使わない） |
+| データ取得（ブラウザ） | TanStack Query v5 |
+| 実行時の検証 | zod v4（モデルの内部でだけ使う） |
+| テスト | Vitest + React Testing Library + MSW / Playwright |
+| 実行基盤・CI | Docker Compose / GitHub Actions |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 構成
 
-## Deploy on Vercel
+```
+ブラウザ (Client Component + TanStack Query)
+   │  GET /api/search?q=&page=        GET /api/repos/{owner}/{repo}
+   ▼
+BFF (Next.js Route Handler)          ← GITHUB_TOKEN はここだけが持つ
+   ▼
+GitHub REST API
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+詳しい設計と判断の理由は [`docs/design.md`](docs/design.md)、要件は [`docs/requirements.md`](docs/requirements.md) にあります。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## こだわった点と、その理由
+
+### 設計・実装
+
+#### `as` を使わず、型安全にする
+
+想定外の値をアプリの中で扱わないためです。型アサーション `as` は「この値はこの型のはず」とコンパイラを黙らせるだけなので、実際の値が違えば実行時まで気づけません。
+
+そこで、外から来る値（URL、GitHub の応答、BFF の応答、環境変数）はすべて `unknown` として受け、入口で 1 回だけ検証してから型を付けるようにしました。以降は検証済みの型だけを受け渡します。
+
+- `as`、`any`、非 null アサーション `!`、`@ts-ignore` は ESLint で禁止しています。テストコードも同じ規則です
+- 失敗し得る処理は例外を投げず `Result` 型を返します。失敗が戻り値の型に現れるので、処理し忘れがコンパイルエラーになります
+- エラーや画面の状態は判別共用体にし、網羅的な `switch` で分岐します。種類を足したときに対応漏れがコンパイルエラーになります
+- 検証には zod を使いますが、モデルのファイルの中に隠し、外には TypeScript の型と `parseXxx` 関数だけを出しています
+
+GitHub の応答も必ず検証を通すので、GitHub の仕様が変わっても壊れた値を黙って画面に流さず、エラーとして記録されます。
+
+#### 負荷をクライアントに寄せる
+
+小さなアプリなので、サーバーも小さく持たせて運用コストを安くするためです。
+
+ページはすべて Client Component で描画し、データはブラウザから BFF（Route Handler）に取りに行きます。サーバーの仕事は「入力を確かめて GitHub に問い合わせ、応答を確かめて返す」ことだけです。BFF を挟むのは、トークンをブラウザに出さないためです。
+
+同じ考えで、サーバーに余計な仕事をさせない選択をしています。
+
+- サーバーでのデータ取得（SSR・Server Components での fetch）は使わない。検索ツールなので SEO も不要
+- オーナーアイコンは `next/image` を使わず、ブラウザが GitHub から直接読む
+- 一覧の行のリンクは先読み（prefetch）をしない
+- 検索ページ内の URL の書き換えは `router.push` ではなく `history.pushState`（サーバーへの問い合わせが起きない）
+
+#### 状態は URL だけに持つ
+
+アプリが状態（state）を持つと、状態同士の同期や復元を考える必要が出て全体が複雑になるためです。検索キーワードとページは URL のパラメータ（`?q=&page=`）だけに持ち、React の state は入力欄の下書きだけにしました。
+
+これだけで、リロード・URL の共有・ブラウザバックで同じ画面に戻る、という動きを追加のコードなしで満たせます。不正な URL（`page=0`、空のキーワードなど）は値を補正せず初期画面に戻す、という 1 つの規則にして、ここでも分岐を増やさないようにしています。
+
+#### 無限スクロールではなくページャーにする
+
+無限スクロールでは、リロードしたときに「何件目まで読み込んで、どこまでスクロールしていたか」を元に戻すのが大変です。ページャーならページ番号を URL に持つだけで、リロード前と同じ状態にできます。上の「状態は URL だけに持つ」とも相性が良く、シンプルに作れます。
+
+#### 本番を想定したエラー処理
+
+レート制限・通信エラー・404・想定外の例外のそれぞれに画面と再試行の手段を用意し、白画面にならないようにしました。production では画面にも API の応答にもエラーの詳細を出さずログにだけ出し、エラー画面の問い合わせ番号（`requestId`）でログと突き合わせられます。
+
+### 作り方
+
+#### 最初に仕様をすべて決めてから、一気に作る
+
+最初の段階で必要な仕様をすべて考えておくことで、全体を見渡したうえで判断できます。作りながら仕様を決めると、AI から次々に来るさまざまな提案に引っ張られ、全体が見えなくなるためです（どこまで先に決めるかは、アプリの規模にもよります）。
+
+そこで、実装に入る前に、要望（[`docs/request.md`](docs/request.md)）→ 要件（[`docs/requirements.md`](docs/requirements.md)。判定できることだけ）→ 設計（[`docs/design.md`](docs/design.md)。判断の理由つき）の 3 段の文書と、静的 HTML の画面モック（`mock/`）を作りました。実装に入ってからは微修正だけです。
+
+#### テスト駆動で、決めた仕様を保証する
+
+仕様を最初に全部決めることとつながりますが、決めた仕様をテストにして、仕様どおりであることを保証しています。
+
+- 画面をまたぐ振る舞いは、実装の前に要件から E2E（Playwright）を全件書きました（166 件）。ケースの一覧は自然言語で [`docs/test-cases-e2e.md`](docs/test-cases-e2e.md) にあります
+- 内部の部品は TDD で、単体・コンポーネントテスト（327 件）を実装と一緒に書いています
+- 見た目は、画面モックと実装の DOM（クラス名を含む）を E2E で比べて、モックどおりであることを確かめています
+
+#### テストが通るまで、AI に自動で開発させる（ループ）
+
+最初に決めたテストがすべて通るまで、AI が自動で開発を続ける仕組みにしました。
+
+AI が書いたコードを人間がすべて読むことはできない、と考えています。そのぶんをテストで補います。その上で、実装に時間がかかったとしても AI が最後まで自動でやり切るので、その間、人間は別のことができます。
+
+- Claude Code のフックで、AI が作業を終えようとするたびに lint / 型チェック / 単体テスト / E2E を実行し、失敗していれば差し戻します。AI が「できました」と言っても、検査が通らなければ終われません
+- E2E が 1 グループ通るたびに、レビュー担当の AI に設計どおりか・型安全か・テストが振る舞いを確かめているかを検査させ、「必ず直す」指摘が無くなってから次へ進みます
+- テストを通すためにテスト側を弱めること（期待値を実装に合わせる、`skip` にするなど）は禁止しています
+
+## スコープ外とその理由
+
+| 項目 | 理由 |
+| --- | --- |
+| 絞り込み・並び替えの UI、検索修飾子（`language:go` 等）の動作保証 | 最低動作要件はキーワード検索。修飾子はそのまま GitHub に渡るので動くことはあるが、保証はしない |
+| 無限スクロール、1,000 件を超える結果 | 状態を URL に持てるページネーションを選んだ。GitHub の検索 API が 1,000 件までしか返さない |
+| 検索履歴、お気に入り、サジェスト | 要件にない。保存先や利用者の識別が必要になる |
+| 詳細ページの追加情報（README、ライセンス等）、オーナーページ | 表示項目は要件で決まっている |
+| ログイン、利用者ごとのトークン、非公開リポジトリ | 公開リポジトリの検索には不要で、認証の実装と運用の負担が大きい |
+| 多言語対応、ダークモード、オフライン対応 | 要件にない |
+| 旧ブラウザ・320px 未満、WCAG 準拠の監査 | ラベル・`role`・`aria-busy` などの基本は対応したが、監査までは行わない |
+| 性能目標の数値化、監視・ログ基盤、サーバー側キャッシュ、スケーリング | インフラを用意しない前提。記録先の抽象化と標準出力への出力までにとどめ、差し替えられる形にした |
+| ブラウザ側のエラーをサーバーへ送る仕組み | 認証のない受け口を増やすリスクに見合わない |
+
+## AI の利用方法レポート
+
+### 使ったもの
+
+- Claude Code（CLI）
+- モデル: 要件・設計の段階は Claude Fable 5.1。実装の段階は Claude Opus で、実装担当のサブエージェントは途中から Sonnet（TODO: 替えた理由）
+
+### 役割分担の方針
+
+人間が要件・方針・判断を決め、AI が調査・文書化・実装・検査を行う、という分担にしました。
+
+- AI の提案はそのまま採らず、「そもそもどういう仕組みか」「それが一般的な実践か」を確かめてから取捨選択する
+- 決めたことと判断の理由は文書に残し、AI はそれを読んで動く。口頭（チャット）だけの決定を残さない
+- 依頼の内容と人間の判断は、依頼ごとに [`docs/ai-usage.md`](docs/ai-usage.md) に 1 行ずつ記録する（このレポートの元）
+
+### 段階ごとの使い方
+
+| 段階 | AI がしたこと | 人間がしたこと |
+| --- | --- | --- |
+| 1. 要件の整理 | 依頼内容とワイヤーフレームを読み取り、不足している仕様を洗い出す。GitHub API の仕様（検索の上限 1,000 件、レート制限、`User-Agent` 必須、Watcher 数の取り方など）を公式ドキュメントで調べる。静的 HTML の画面モックを作る | 関連するGitHub API の仕様を理解する。不足点ごとに仕様を決める（1 ページ 20 件、ページネーション、スコープ外など）。要望・要件・方針が混ざった文書を分けさせる |
+| 2. 設計 | 構成・モデル・BFF の API 仕様・画面の状態・エラー処理・テストの設計を書く。zod と手書きの検証を実際のコードで比べるなど、判断の材料を出す | 型安全の方針、サーバーを薄くする方針、GitHub の差し替え方などを決める |
+| 3. 仕様の検査 | 読み取り専用のサブエージェントに、要望・要件・設計の矛盾・抜け・曖昧さを洗わせる（`planner` 29 件、`spec-reviewer` 要修正 12 件・確認 8 件ほか） | 1 件ずつ説明を受けて判断する。AI の推奨と違う案を採ったものもある |
+| 4. 環境構築 | Docker 上で Next.js 16 を作成し、Compose・Dockerfile・ESLint・テスト・CI を整える。設計で「実装時に確認」とした Next.js 16 の挙動 9 項目を小さなコードで確かめ、設計に反映する | 開発もツールもすべてコンテナ内で動かす構成にする |
+| 5. E2E の作成 | 要件から E2E を 166 件書き、自然言語のケース一覧（[`docs/test-cases-e2e.md`](docs/test-cases-e2e.md)）も作る | 一覧をレビューし、「これが全部通れば完成」と言えるか判断する |
+| 6. 実装 | E2E を 1 グループずつ選び、TDD で実装する（モデル → BFF → 検索ページ → 詳細ページの 4 単位、100 コミット超）。迷った点と判断を実装ログ（[`docs/impl-log/`](docs/impl-log/)）に残す | ループの開始を宣言し、あとは任せる。ログで判断を確認する |
+| 7. レビュー | E2E が 1 グループ通るたびに `code-reviewer` がレビューし、「必ず直す」が無くなるまで直す。最後に全体レビュー（[`docs/review-log/`](docs/review-log/)） | なし |
+| 8. 仕上げ | コードにコメントを付ける（`commenter` を 4 並列） | 成果物の確認、動作チェック |
+| 9. 動作確認後の修正 | 1,000 件を超える結果に注意書きを出す修正を、仕様 → モック → 実装（E2E 追加 → TDD → レビュー）の順で行う | 50 ページで止まる理由が画面から分からない点に気づき、注意書きを足すと決める。修正の進め方を「仕様 → モックで確認 → 実装」と決めて開発ルールにする。文字の色と、テストで確かめる 2 通り（1,000 件超・以下）を指定する |
+
+### 用意した仕組み
+
+**サブエージェント**（`.claude/agents/`）: 役割ごとに分け、検査役は読み取り専用にして、書く役と検査する役を分けました。
+
+| エージェント | 役割 | 書き換え |
+| --- | --- | --- |
+| `spec-reviewer` | 要望・要件・設計の整合性の検査 | しない |
+| `planner` | 次に何をどの順で作るかの計画 | しない |
+| `nextjs-implementer` | TDD での実装、単体・コンポーネントテスト | する |
+| `e2e-runner` | E2E の作成・実行・失敗の切り分け | する |
+| `code-reviewer` | 設計どおりか、型安全か、テストが振る舞いを確かめているかの検査 | しない |
+| `commenter` | コードに「なぜ」を説明するコメントを付ける（コードは変えない） | コメントだけ |
+
+**フック**（`.claude/settings.json`）: AI の「できました」を信用せず、機械的に検査します。
+
+- ファイルを編集するたびに型チェックし、失敗したら AI に差し戻す
+- AI が応答を終えようとするたびに lint / 型チェック / 単体テスト / E2E を実行し、失敗していれば差し戻す
+- 差し戻しが 5 回続いたら、無限ループを防ぐために警告を出して通す（人間が発言すると数え直す）
+
+**作業ルール**（[`docs/workflow.md`](docs/workflow.md)）: テストを通すためにテスト側を弱める（期待値を実装に合わせる、`skip` にする、E2E を消す）ことを禁止し、E2E を完成判定に含めるかどうかの切り替えは人間だけが操作します。
+
+### 人間が判断・修正した主な点
+
+- **型安全の方針**: 「`as` を使わない」「実行時にならないと分からないことを減らす」を人間が決めました。zod の要否は、手書きとの比較コードを AI に書かせて確かめてから採用し、zod を内部に隠して型だけを外に出す形も人間が決めています
+- **GitHub の差し替え方**: E2E で GitHub をモックする方法として、AI は「接続先 URL を環境変数で替える」案を出しましたが、interface で抽象化して偽物を注入する形の方が良いと判断しました
+- **仕様を簡単にする**: 読み込み中の見せ方を場面ごとに変える AI の案を「常に前の結果を薄く表示」に揃えました。不正な URL は値を補正せず初期画面に戻す、範囲外のページは空のページを出す、と規則を少なくしました
+- **サーバーの役割**: SSR を使わない、`next/image` を使わない、CDN を使わないなど、サーバーを薄く保つ判断は人間が決めました
+- **進め方**: 「ループの前に単体テストまで全部書く」という当初の考えを AI に相談し、一般的な実践（ATDD の二重ループ）を確かめたうえで、先に書くのは E2E だけに改めました
+- **フックの設計**: AI が作ったフックは「2 回目の停止は無条件に通す」作りでした。それでは勝手に開発が止まるので、「5 回連続の失敗で警告して通す」に直させました
+- **E2E の一覧**: AI はテストのコードからケース一覧を作りましたが、自然言語の一覧を正とし、コードはそれを写したものとして扱うよう改めました
+- **文書の書き方**: 要望・要件・方針を分けさせ、同じ注意点を何度も繰り返す冗長さを削らせ、ファイルを不必要に増やさないようにしました
+
+### AI の誤りと、AI に助けられた点
+
+AI の誤りは、指摘して直させました。
+
+- 説明の誤り（設計に `next/image` を使うと書いてある、と説明したが、実際は設定が 1 行残っていただけだった、など）
+- 画面モックは Tailwind CSS v3、実装は v4 と版がずれていた。見た目の比較ができない理由として挙げられたので、なぜ揃えないのかと指摘し、統一させた
+
+逆に、AI に助けられた点もあります。
+
+- 人間が用意したフックの設定案は、パイプで終了コードが消えて検査が効かないことを AI が指摘し、正しく差し戻すスクリプトに書き直した
+- GitHub API の `watchers_count` は実際には Star 数と同じ値で、Watcher 数は `subscribers_count` を使う必要があることを、調査の段階で AI が見つけた
+- コメント付けの過程で、既存のコメントがコードの実際の動きと食い違っている箇所を AI が見つけて直した
+
+### うまくいかなかったこと
+
+- 実装担当のサブエージェントへの依頼が、安全機構の誤検知で何度か止められました。記録を調べて「作業の最初に実装ログを書かせる」指示が引き金だと推定し、ログを最後に書かせる形に変えて解消しました。それでも止まる場面では、汎用のエージェントに定義ファイルを読ませる形で依頼して進めました
+- E2E を含む検査は 1 回 2 分ほどかかり、AI が応答を終えるたびに走るので待ち時間が長くなりました。E2E の待ち時間を短くし、結果をキャッシュして同じコードで再実行しないようにしました
