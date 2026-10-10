@@ -11,7 +11,7 @@ GitHub のリポジトリを検索する Web アプリケーション。判定�
 - Docker Compose だけで動かせる。development（`docker compose up`）と production（production ビルドのイメージ。`docker compose --profile prod up app-prod`）の 2 つの起動方法があり、README に手順がある
 - production イメージは `GET /api/health` で死活確認できる
 - CI（GitHub Actions）で lint / 型チェック / 単体テスト / E2E / ビルドを実行し、すべて通る
-- README に、工夫した点・こだわった点、選択理由、スコープ外とその理由、AI の利用方法を書く
+- README に、工夫した点・こだわった点、選択理由、AI の利用方法を書く
 
 ## 共通
 
@@ -50,7 +50,7 @@ GitHub のリポジトリを検索する Web アプリケーション。判定�
 
 ## スコープ外
 
-以下は実装しない。README に理由を書く。
+以下は実装しない。
 
 - 絞り込み・並び替えの UI、検索修飾子（`language:go` 等）の動作保証
 - 無限スクロール、1,000 件を超える結果（表示はしない。超えていることは注意書きで知らせる）
