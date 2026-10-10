@@ -1,6 +1,7 @@
 # 実行基盤はすべて Docker Compose（docs/design.md 6 節）。環境変数は .env に置く（自動で読まれる）
 # development: docker compose up app
-# 擬似本番: GITHUB_TOKEN=... docker compose --profile prod up
+# 擬似本番: docker compose --profile prod up --build app-prod
+#   サービス名を付けないと、profile の無い app も一緒に起動して 3000 番ポートが衝突する
 # E2E:
 #   docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e
 services:

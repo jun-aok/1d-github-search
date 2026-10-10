@@ -8,7 +8,7 @@ GitHub のリポジトリを検索する Web アプリケーション。判定�
 - Next.js v16 以降、App Router
 - TypeScript（`strict`）
 - テストコードを含める。単体・コンポーネントテストに加えて E2E（Playwright）を含める
-- Docker Compose だけで動かせる。development（`docker compose up`）と production（production ビルドのイメージ。`docker compose --profile prod up`）の 2 つの起動方法があり、README に手順がある
+- Docker Compose だけで動かせる。development（`docker compose up`）と production（production ビルドのイメージ。`docker compose --profile prod up app-prod`）の 2 つの起動方法があり、README に手順がある
 - production イメージは `GET /api/health` で死活確認できる
 - CI（GitHub Actions）で lint / 型チェック / 単体テスト / E2E / ビルドを実行し、すべて通る
 - README に、工夫した点・こだわった点、選択理由、スコープ外とその理由、AI の利用方法を書く

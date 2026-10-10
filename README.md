@@ -16,7 +16,7 @@ docker compose up app                                    # 開発サーバー ht
 ```
 
 ```bash
-GITHUB_TOKEN=... docker compose --profile prod up --build   # 擬似本番（production イメージ + 本物の GitHub）
+docker compose --profile prod up --build app-prod        # 擬似本番（production イメージ + 本物の GitHub）
 ```
 
 検査:

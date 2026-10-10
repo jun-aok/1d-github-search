@@ -31,7 +31,7 @@ docker compose run --rm --no-deps -T app npm run typecheck
 docker compose run --rm --no-deps -T app npm test       # Vitest（単体・コンポーネント）
 docker compose run --rm --no-deps -T app npm run format # Prettier --write
 docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e   # E2E（production イメージ + fake）約 2 分
-GITHUB_TOKEN=... docker compose --profile prod up --build   # 擬似本番（production イメージ + 本物の GitHub）
+docker compose --profile prod up --build app-prod       # 擬似本番（production イメージ + 本物の GitHub）
 ```
 
 - production ビルドは `Dockerfile` で行う。`app` サービス内で `next build` を実行しない（`NODE_ENV=development` のため失敗する）

@@ -355,7 +355,7 @@ page.tsx
   | development | `docker compose up app` | development | http | 任意 |
   | test | `docker compose run --rm app npm test` | test | （偽物を注入） | 不要 |
   | e2e | `docker compose --profile e2e up --build --abort-on-container-exit --exit-code-from e2e e2e`（`app-e2e` を起動し `e2e` を実行。イメージのビルドを含めて約 2 分） | production | fake | 不要 |
-  | production（擬似本番） | `docker compose --profile prod up`（`app-prod` を http で起動） | production | http | 必須 |
+  | production（擬似本番） | `docker compose --profile prod up --build app-prod`（サービス名を付けないと profile の無い `app` も起動し、3000 番が衝突する） | production | http | 必須 |
 
   - `NODE_ENV` の由来: `next dev` = development、`next build` / `next start` = production、Vitest = test
   - `app` サービスは `NODE_ENV=development` なので、その中で `next build` を実行すると React の dev / prod 不一致で失敗する（確認済み）。production ビルドは必ず `Dockerfile`（`app-prod` / `app-e2e`）で行う
